@@ -1,0 +1,26 @@
+# Dependencies — never commit these. They are large, platform-specific
+# (native binaries differ per OS), and fully recreatable with `npm install`.
+node_modules/
+
+# Build output
+dist/
+packages/vscode/out/
+*.vsix
+
+# Tool caches
+.vite/
+.cache/
+*.tsbuildinfo
+
+# Local / editor / OS noise
+.DS_Store
+Thumbs.db
+*.local
+*.log
+npm-debug.log*
+.env
+.env.local
+
+# Backup copies made alongside the repo
+*-backup/
+*-backup-*/

@@ -1,0 +1,40 @@
+{
+  "name": "pbip-lineage-explorer",
+  "version": "1.0.0",
+  "description": "Interactive lineage explorer for Power BI PBIP projects - trace dependencies from visuals to source columns",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@pbip-lineage/core": "workspace:*",
+    "d3": "^7.9.0",
+    "isomorphic-git": "^1.37.4"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0",
+    "vitest": "^3.0.0"
+  },
+  "license": "MIT",
+  "author": "Abearstudios",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Abearstudios/pbip-lineage-explorer"
+  },
+  "keywords": [
+    "power-bi",
+    "pbip",
+    "lineage",
+    "pbir",
+    "tmdl",
+    "dax",
+    "data-lineage"
+  ]
+}

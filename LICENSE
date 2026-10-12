@@ -1,6 +1,12 @@
 MIT License
 
-Copyright (c) 2026 AusBearDataAnalytics
+Copyright (c) 2026 Jihwan Kim
+Modifications Copyright (c) 2026 Abearstudios
+
+This is a modified, customized, and enhanced version of the original
+PBIP Lineage Explorer (https://github.com/JonathanJihwanKim/pbip-lineage-explorer)
+by Jihwan Kim. The original MIT license and copyright notice below apply to
+the original work and this derivative in full.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

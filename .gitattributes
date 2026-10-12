@@ -1,0 +1,24 @@
+# Keep line endings stable across machines.
+#
+# Without this, editing on Windows can rewrite whole files to CRLF, which makes
+# every line look changed and buries real edits in the diff.
+#
+# Source and text files are stored as LF in the repo (Windows editors handle LF
+# fine). The Windows batch launcher is the exception - cmd.exe needs CRLF.
+
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+*.command text eol=lf
+*.sh      text eol=lf
+
+# Binary assets - never touch these.
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.vsix binary
