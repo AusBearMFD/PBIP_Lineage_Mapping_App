@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lineage Explorer AI Skills</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: left-rail contents on wide screens, single column on phones. Dark-first, matching the other guides. */
+  :root {
+    --bg: #121623; --surface: #1a1f2e; --surface-2: #232a3b; --fg: #e7eaf1; --fg-muted: #a3abbd; --line: #313a4e;
+    --accent: #5cc3cf; --accent-soft: #163a41; --measure: #f2a93b; --measure-soft: #3b2c12;
+    --warn: #f08a74; --warn-soft: #42241d; --ok: #7fcf8f; --ok-soft: #1d3625; --info: #7fb3ff; --info-soft: #1d2d4a;
+    --ai: #b59cff; --ai-soft: #2c2448;   /* violet: the AI assistant */
+    --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f4f6f9; --surface: #ffffff; --surface-2: #e9edf3; --fg: #1b2130; --fg-muted: #5a6478; --line: #d3d9e3;
+      --accent: #0b6e7a; --accent-soft: #d6ecef; --measure: #b06400; --measure-soft: #fdefd9;
+      --warn: #a3412d; --warn-soft: #fbe5e0; --ok: #2f7a3e; --ok-soft: #dff1e2; --info: #2b63c4; --info-soft: #dde8fb;
+      --ai: #5b3fbf; --ai-soft: #ebe5fb;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f6f9; --surface: #ffffff; --surface-2: #e9edf3; --fg: #1b2130; --fg-muted: #5a6478; --line: #d3d9e3;
+    --accent: #0b6e7a; --accent-soft: #d6ecef; --measure: #b06400; --measure-soft: #fdefd9;
+    --warn: #a3412d; --warn-soft: #fbe5e0; --ok: #2f7a3e; --ok-soft: #dff1e2; --info: #2b63c4; --info-soft: #dde8fb;
+    --ai: #5b3fbf; --ai-soft: #ebe5fb;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; margin: 0; }
+  a { color: var(--accent); }
+  code, pre { font-family: var(--font-mono); font-size: 0.9em; }
+  code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+  pre { background: var(--surface-2); padding: 12px 14px; border-radius: 8px; overflow-x: auto; line-height: 1.5; margin: 10px 0; }
+  pre code { background: none; padding: 0; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding-block: 32px 64px; padding-inline: 20px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 40px; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); } .toc { position: static !important; } }
+  .toc { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; font-size: 14px; padding-top: 8px; }
+  .toc .label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); font-weight: 600; margin-bottom: 8px; }
+  .toc ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+  .toc a { color: var(--fg); text-decoration: none; display: block; padding: 3px 0 3px 10px; border-left: 2px solid var(--line); }
+  .toc a:hover { border-left-color: var(--accent); color: var(--accent); }
+
+  main { min-width: 0; }
+  header.hero { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 36px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ai); font-weight: 600; }
+  h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin: 6px 0 12px; text-wrap: balance; font-weight: 700; }
+  .lede { font-size: 18px; color: var(--fg-muted); max-width: 68ch; margin: 0; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .chip { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg-muted); }
+
+  section { margin-bottom: 48px; }
+  h2 { font-size: 24px; margin: 0 0 14px; padding-top: 8px; scroll-margin-top: 16px; text-wrap: balance; }
+  h3 { font-size: 17px; margin: 24px 0 8px; }
+  p, li { max-width: 72ch; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 6px; }
+
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; }
+  .callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .callout.ai { border-color: var(--ai); background: var(--ai-soft); }
+  .callout p { margin: 0; }
+  .callout p + p { margin-top: 8px; }
+  .callout strong:first-child { display: block; margin-bottom: 4px; }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 14px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { background: var(--surface-2); font-weight: 600; font-size: 13px; letter-spacing: 0.02em; }
+  tr:last-child td { border-bottom: none; }
+  td.k { white-space: nowrap; font-family: var(--font-mono); font-size: 13px; }
+  td.nw { white-space: nowrap; }
+
+  /* building blocks */
+  .blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 14px 0; }
+  .block { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; border-top-width: 4px; min-width: 0; }
+  .block.a { border-top-color: var(--accent); } .block.b { border-top-color: var(--ai); } .block.c { border-top-color: var(--measure); }
+  .block .tagline { font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-muted); font-weight: 600; }
+  .block h4 { margin: 2px 0 6px; font-size: 16px; }
+  .block p { margin: 0; font-size: 14.5px; color: var(--fg-muted); }
+
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 16px 0; }
+  .flow .step { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; flex: 1 1 150px; min-width: 0; font-size: 14px; }
+  .flow .step b { display: block; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 2px; color: var(--accent); }
+  .flow .step.ai b { color: var(--ai); }
+  .flow .arrow { align-self: center; color: var(--fg-muted); font-size: 18px; }
+
+  /* skill cards */
+  .skill { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin: 16px 0; min-width: 0; }
+  .skill-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; margin-bottom: 6px; }
+  .skill-head h3 { margin: 0; font-size: 18px; }
+  .skill-head .slug { font-family: var(--font-mono); font-size: 13px; color: var(--ai); }
+  .skill .pitch { color: var(--fg-muted); margin: 0 0 12px; }
+  .skill dl { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 6px 14px; margin: 0; font-size: 14.5px; }
+  @media (max-width: 560px) { .skill dl { grid-template-columns: minmax(0, 1fr); } .skill dt { margin-top: 6px; } }
+  .skill dt { color: var(--fg-muted); font-weight: 600; font-size: 13px; }
+  .skill dd { margin: 0; min-width: 0; }
+  .skill dd ul, .skill dd ol { margin: 0; padding-left: 18px; }
+  .skill dd li { margin-bottom: 3px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+  .badge.read { background: var(--ok-soft); color: var(--ok); }
+  .badge.edit { background: var(--measure-soft); color: var(--measure); }
+  .badge.ext { background: var(--info-soft); color: var(--info); }
+  .badge.s { background: var(--surface-2); color: var(--fg-muted); }
+  .badge.req { background: var(--ai-soft); color: var(--ai); }
+
+  /* conversation */
+  .chat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 14px 0; display: grid; gap: 10px; }
+  .chat .label { font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-muted); font-weight: 600; }
+  .msg { padding: 10px 14px; border-radius: 10px; font-size: 14.5px; max-width: 64ch; }
+  .msg p { margin: 0; } .msg p + p, .msg ul { margin-top: 6px; }
+  .msg ul { padding-left: 18px; margin-bottom: 0; } .msg li { margin-bottom: 2px; }
+  .msg.user { background: var(--surface-2); justify-self: end; }
+  .msg.bot { background: var(--ai-soft); border-left: 3px solid var(--ai); }
+  .msg .who { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 3px; color: var(--fg-muted); }
+  .msg.bot .who { color: var(--ai); }
+
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 14px 0; }
+  .rule { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+  .rule h4 { margin: 0 0 4px; font-size: 15px; }
+  .rule p { margin: 0; font-size: 14.5px; color: var(--fg-muted); }
+
+  .phases { display: grid; gap: 12px; margin: 14px 0; }
+  .phase { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  @media (max-width: 560px) { .phase { grid-template-columns: minmax(0, 1fr); } }
+  .phase .when { font-family: var(--font-mono); font-weight: 600; color: var(--accent); }
+  .phase .when small { display: block; font-family: var(--font-body); font-weight: 500; color: var(--fg-muted); font-size: 12px; }
+  .phase h4 { margin: 0 0 4px; font-size: 15.5px; }
+  .phase p { margin: 0; font-size: 14.5px; }
+
+  details { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 10px 14px; margin: 10px 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p:last-child { margin-bottom: 0; }
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 16px; font-size: 13.5px; color: var(--fg-muted); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <div class="label">Contents</div>
+    <ol>
+      <li><a href="#idea">1. The idea</a></li>
+      <li><a href="#how">2. How it would work</a></li>
+      <li><a href="#rules">3. Ground rules</a></li>
+      <li><a href="#core">4. The three core skills</a></li>
+      <li><a href="#more">5. More skill ideas</a></li>
+      <li><a href="#examples">6. Example conversations</a></li>
+      <li><a href="#overview">7. All skills at a glance</a></li>
+      <li><a href="#roadmap">8. Suggested roadmap</a></li>
+      <li><a href="#risks">9. Risks &amp; open questions</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">Proposal · future additions</div>
+      <h1>An AI skill set for the PBIP Lineage Explorer</h1>
+      <p class="lede">A set of AI assistant skills that read the same PBIP folders as the app, explain what you are looking at, walk you through orphan cleanup one decision at a time, and remind you which measures and visuals depend on anything you ask the AI to change.</p>
+      <div class="meta">
+        <span class="chip">Status: proposal, not built</span>
+        <span class="chip">Target: Claude Code skills, stored in the repo</span>
+        <span class="chip">Builds on the existing lineage engine</span>
+      </div>
+    </header>
+
+    <!-- 1 -->
+    <section id="idea">
+      <h2>1. The idea</h2>
+      <p>The Lineage Explorer is good at <em>showing</em> lineage. People still have to read it, decide what it means, and then go and make the change in Power BI by hand. An AI assistant can close that gap, if it works from the same facts the app does.</p>
+      <p>The proposal is a small set of <strong>skills</strong>: packaged instructions an AI assistant (Claude Code) loads when a user asks for a particular kind of help. Each skill would:</p>
+      <ul>
+        <li>read the PBIP folder using the <strong>same engine as the app</strong>, so its answers about dependencies, visuals, and orphan status match what the app shows;</li>
+        <li>explain findings in plain language and answer follow-up questions;</li>
+        <li>for skills that change files, <strong>show the impact first, ask for confirmation, make the edit, then re-run the analysis</strong> to prove nothing unexpected broke.</li>
+      </ul>
+      <div class="callout ai">
+        <p><strong>The key design choice</strong>The AI never works out lineage on its own by reading DAX and guessing. It asks the lineage engine, which already has 133 tests behind it. The AI's job is to explain, ask the right questions, and carry out edits carefully. That keeps the answers consistent with the app and much harder to get wrong.</p>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section id="how">
+      <h2>2. How it would work</h2>
+      <p>Three building blocks. Only the first needs new engineering; the other two are mostly writing.</p>
+      <div class="blocks">
+        <div class="block a">
+          <div class="tagline">Foundation · new</div>
+          <h4>Lineage command-line tool</h4>
+          <p>A small Node script that runs the existing engine (<code>packages/core</code>) against a folder and prints the answer as JSON. The VS Code extension already runs the engine in Node, so this is a thin wrapper, not new logic.</p>
+        </div>
+        <div class="block b">
+          <div class="tagline">The skills</div>
+          <h4>Skill pack in the repo</h4>
+          <p>One folder per skill under <code>.claude/skills/</code>, each with a <code>SKILL.md</code> describing when it applies, which commands to run, what to ask the user, and what it must never do. Versioned with the app.</p>
+        </div>
+        <div class="block c">
+          <div class="tagline">App hand-off · new</div>
+          <h4>"Copy for AI" button</h4>
+          <p>The AI cannot see the browser tab. A button in the app would copy the current selection (measure or visual, its status, dependents, and visuals) as a short text block to paste into the AI chat, so "explain what I'm looking at" just works.</p>
+        </div>
+      </div>
+
+      <h3>Proposed commands for the command-line tool</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Command</th><th>Returns</th><th>Engine function it wraps</th></tr></thead>
+        <tbody>
+          <tr><td class="k">summary &lt;folder&gt;</td><td>Counts, reports, pages, orphan totals by status</td><td><code>analyze</code> / <code>analyzeWorkspace</code>, <code>computeStats</code></td></tr>
+          <tr><td class="k">measure &lt;name&gt;</td><td>Status, DAX, upstream and downstream measures, columns, visuals with report and page, active filters</td><td><code>buildDependencyStripData</code>, <code>classifyMeasureUsage</code></td></tr>
+          <tr><td class="k">visual &lt;title or id&gt;</td><td>Every measure and source column behind one visual</td><td><code>traceVisualLineage</code></td></tr>
+          <tr><td class="k">orphans</td><td>Measures grouped by the four statuses, plus unused columns</td><td><code>findOrphansByCategory</code></td></tr>
+          <tr><td class="k">measures</td><td>One row per measure with dependency counts (the Dependents grid)</td><td><code>buildMeasureSummaryRows</code></td></tr>
+          <tr><td class="k">impact &lt;name&gt;</td><td>Everything upstream and downstream of a measure</td><td><code>analyzeImpact</code>, <code>exportImpactReport</code></td></tr>
+          <tr><td class="k">diff &lt;git-ref&gt;</td><td>Changes between the working folder and a commit or branch, with affected visuals</td><td><code>detectChanges</code>, <code>resolveImpact</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="flow" aria-label="How a request flows">
+        <div class="step"><b>User</b>"Can I delete Unused Metric?" (optionally pastes the app's "Copy for AI" block)</div>
+        <div class="arrow">→</div>
+        <div class="step ai"><b>Skill</b>Loads the matching skill's instructions</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>Engine</b>CLI runs the same analysis the app runs and returns JSON</div>
+        <div class="arrow">→</div>
+        <div class="step ai"><b>Answer</b>Plain-language explanation, then a question or a confirmed edit</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>Verify</b>CLI runs again; skill reports what changed</div>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section id="rules">
+      <h2>3. Ground rules every skill follows</h2>
+      <p>These go into every skill's instructions. They are what make AI edits to a Power BI model safe enough to use.</p>
+      <div class="rules">
+        <div class="rule"><h4>Facts come from the engine</h4><p>Dependencies, visuals, and orphan status are always looked up with the CLI, never inferred from reading DAX. If the engine and the AI disagree, the engine wins.</p></div>
+        <div class="rule"><h4>Impact before any edit</h4><p>Before changing, renaming, or deleting anything, list what depends on it: dependent measures, visuals with report and page, active filters, RLS rules. Then ask.</p></div>
+        <div class="rule"><h4>One confirmation per deletion</h4><p>Deletions are never bulk-approved by default. The user chooses which statuses are in scope and confirms each item, or explicitly approves a listed batch.</p></div>
+        <div class="rule"><h4>Work on a branch</h4><p>Edits happen on a new git branch, so every change can be reviewed and undone. If the folder is not a git repo, the skill makes a backup copy first.</p></div>
+        <div class="rule"><h4>Prove it afterwards</h4><p>After editing, re-run the analysis and show a before/after: which statuses changed, and that no visual lost a field it still needs.</p></div>
+        <div class="rule"><h4>Close Power BI Desktop</h4><p>Desktop does not reload PBIP files that change on disk and can overwrite edits when it saves. Skills that edit files check with the user that the project is closed first.</p></div>
+        <div class="rule"><h4>Say what was not loaded</h4><p>Every answer about usage repeats the app's limit: only the loaded folders were checked. Reports elsewhere, Excel connections, and paginated reports are invisible.</p></div>
+        <div class="rule"><h4>Stay in the folder</h4><p>Skills read and write only inside the chosen PBIP folder. They never publish to the Power BI Service or touch a workspace.</p></div>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section id="core">
+      <h2>4. The three core skills</h2>
+      <p>These are the three you asked for. They share the CLI and the ground rules above.</p>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Lineage Guide</h3><span class="slug">pbip-lineage-guide</span></div>
+        <p class="pitch">Explains what you are looking at in the app, and answers any question about how measures, visuals, and sources connect.</p>
+        <dl>
+          <dt>You might say</dt><dd>"Explain this measure." · "Why is YoY Growth flagged as no visual?" · "Which visuals use Total Sales, and on which pages?" · "What source column does Sales Amount come from?"</dd>
+          <dt>What it does</dt><dd><ul>
+            <li>Reads a pasted "Copy for AI" block, or looks the item up by name.</li>
+            <li>Explains the DAX in plain words, then lists what it depends on and what depends on it.</li>
+            <li>Explains its usage status using the app's four definitions, and why it landed there.</li>
+            <li>Suggests where to look next ("open the Measure Map on Total Sales to see all 4 visuals").</li>
+          </ul></dd>
+          <dt>Never</dt><dd>Edits files. This skill is read-only.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge read">Read-only</span><span class="badge s">Size: small</span></dd>
+        </dl>
+      </div>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Orphan Cleanup</h3><span class="slug">pbip-orphan-cleanup</span></div>
+        <p class="pitch">Walks through unused measures and columns, lets you choose which orphan definitions to act on, and removes only what you approve.</p>
+        <dl>
+          <dt>You might say</dt><dd>"Help me clean up unused measures." · "Delete the true orphans." · "What's safe to remove from this model?"</dd>
+          <dt>What it does</dt><dd><ol>
+            <li>Loads the whole workspace folder if there is one, and reminds you that unloaded reports are not checked.</li>
+            <li>Shows counts for each status with the app's definitions: <strong>True orphans</strong> (safest), <strong>Visual orphans</strong> (investigate), <strong>Filter/RLS</strong> (usually keep), and <strong>unused columns</strong>.</li>
+            <li>Asks which statuses you want in scope. By default it offers only True orphans and warns before including Filter/RLS, since those control what users see.</li>
+            <li>For Visual orphans, shows the chain (A is used only by B, which nothing uses) and offers to remove the chain together.</li>
+            <li>Lists each candidate with its DAX and table, and asks you to keep, delete, or skip.</li>
+            <li>Removes approved measures from the TMDL files on a new branch, re-runs the analysis, and shows the new counts.</li>
+            <li>Writes a short cleanup log you can attach to the pull request.</li>
+          </ol></dd>
+          <dt>Never</dt><dd>Deletes anything you have not explicitly approved, deletes a Filter/RLS measure without a second warning, or touches report visuals.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge edit">Edits model files</span><span class="badge s">Size: medium</span></dd>
+        </dl>
+      </div>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Safe Measure Change</h3><span class="slug">pbip-safe-change</span></div>
+        <p class="pitch">Any time you ask the AI to change a measure, it first reminds you of everything that depends on it, then makes the change and checks the result.</p>
+        <dl>
+          <dt>You might say</dt><dd>"Change Total Sales to exclude returns." · "Rewrite Margin % to use DIVIDE." · "Update YoY Growth to fiscal years."</dd>
+          <dt>What it does</dt><dd><ol>
+            <li>Looks up the measure and shows a short impact card: dependent measures (direct and indirect), visuals by report and page, active filters, RLS rules.</li>
+            <li>Flags high-risk cases: many dependents, use in RLS, use in a field parameter or calculation group.</li>
+            <li>Proposes the new DAX, shows the old and new side by side, and asks for approval.</li>
+            <li>Applies the edit on a branch, re-runs the analysis, and confirms the dependency picture is unchanged (or explains what changed, for example a new column reference).</li>
+            <li>Lists which visuals to spot-check in Power BI Desktop before publishing.</li>
+          </ol></dd>
+          <dt>Never</dt><dd>Edits a measure without showing the impact card first, or changes other measures as a side effect without asking.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge edit">Edits model files</span><span class="badge s">Size: medium</span></dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section id="more">
+      <h2>5. More skill ideas</h2>
+      <p>Each of these pairs naturally with something the app already computes.</p>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Rename &amp; Refactor</h3><span class="slug">pbip-rename</span></div>
+        <p class="pitch">Renames a measure or column everywhere it is used, so no visual breaks.</p>
+        <dl>
+          <dt>Why it helps</dt><dd>A rename in one place silently breaks every DAX reference to the old name and every visual, filter, and bookmark that binds it. The app already knows all of those locations.</dd>
+          <dt>What it does</dt><dd>Updates the definition, every DAX reference, visual field bindings, filter entries, and field parameter lists across all loaded reports. Re-runs the analysis to confirm no orphaned or missing references.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge edit">Edits model and report files</span><span class="badge s">Size: large</span></dd>
+        </dl>
+      </div>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Visual Naming</h3><span class="slug">pbip-visual-names</span></div>
+        <p class="pitch">Finds data visuals still carrying a default name, such as "Table", "Matrix", or no title at all, and gives each one a name that describes what it shows.</p>
+        <dl>
+          <dt>Why it helps</dt><dd>When a visual has no title, the app can only label it by type: <em>Table (3 measures)</em> in the sidebar and just <code>tableEx</code> or <code>pivotTable</code> in the lineage tree. On a page with four untitled tables, the Measure Map and impact lists show four identical boxes. Descriptive names make every lineage view, export, and change report readable.</dd>
+          <dt>What counts as default</dt><dd><ul>
+            <li>No title text set.</li>
+            <li>A title that is just a type or placeholder: "Table", "Matrix", "Chart", "Card", "Visual 1", "Copy of Table".</li>
+            <li>Groups still named "Group 1", "Group 2" (optional).</li>
+            <li>Only visuals that are <strong>bound to data</strong>. Text boxes, shapes, images, and buttons without fields are skipped.</li>
+          </ul></dd>
+          <dt>How names are built</dt><dd><ul>
+            <li>From the visual's fields <em>by role</em>, which the engine already records: main measures (Values, Y-axis) first, then the grouping columns (Rows, Category, X-axis, Legend). For example, a matrix with Total Sales and Margin % by Region and Month becomes <em>Total Sales &amp; Margin % by Region, Month</em>.</li>
+            <li>Simple patterns per type: a card takes its measure name, a slicer becomes <em>Slicer: Region</em>, and a wide detail table becomes <em>Customer detail (8 columns)</em>.</li>
+            <li>Field parameter display names are used when present.</li>
+            <li>Names are kept short (about 40 characters), made unique on each page, and follow the team's naming convention if one exists.</li>
+          </ul></dd>
+          <dt>Where the name goes</dt><dd>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Mode</th><th>What changes</th><th>Report readers see</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Hidden title</strong> (default)</td><td>Writes the title text into <code>visual.json</code> with the title's <em>show</em> switch left off</td><td>No change. The app and other tools that read titles pick up the new name.</td></tr>
+                <tr><td><strong>Visible title</strong></td><td>Writes the title text and turns the title on</td><td>A new title above the visual. Needs the report owner's sign-off, since it changes the design.</td></tr>
+                <tr><td><strong>App-only names</strong></td><td>Writes a small names file the app reads alongside the PBIP; no PBIP file changes</td><td>No change. Requires a small app feature to read the file.</td></tr>
+              </tbody>
+            </table></div>
+            <p style="margin:8px 0 0;font-size:14px;color:var(--fg-muted)">In hidden-title mode the edit to each <code>visual.json</code> looks like this:</p>
+<pre><code>"visualContainerObjects": {
+  "title": [{ "properties": {
+    "show": { "expr": { "Literal": { "Value": "false" } } },
+    "text": { "expr": { "Literal": { "Value": "'Total Sales by Region'" } } }
+  } }]
+}</code></pre>
+          </dd>
+          <dt>What it does</dt><dd><ol>
+            <li>Scans every loaded report and lists default-named data visuals in a table: report, page, type, current label, fields by role, and the proposed name.</li>
+            <li>Lets you accept, edit, or skip each name, or accept a page or a whole report at once.</li>
+            <li>Asks which mode to use, defaulting to hidden titles.</li>
+            <li>Confirms the project is closed in Power BI Desktop, writes the titles on a new branch, then re-runs the analysis. It shows how many visuals still use a default name, and confirms every visual kept exactly the same fields.</li>
+          </ol></dd>
+          <dt>Never</dt><dd>Overwrites a title someone wrote, changes a visual's fields, formatting, or position, or turns on a visible title without asking.</dd>
+          <dt>Pairs with</dt><dd>A cheap app improvement worth doing regardless: make the fallback label for untitled visuals use the main fields (<em>Table: Total Sales, Region</em>) instead of the type alone.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge edit">Edits report files (titles only)</span><span class="badge s">Size: medium</span></dd>
+        </dl>
+      </div>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Change Review</h3><span class="slug">pbip-change-review</span></div>
+        <p class="pitch">Summarises a branch or pull request in plain language, with the visuals each change affects.</p>
+        <dl>
+          <dt>Why it helps</dt><dd>Reviewers currently read raw JSON diffs. The engine's change detection already classifies 29 kinds of change.</dd>
+          <dt>What it does</dt><dd>Runs <code>diff</code> against the target branch, groups changes by risk (measure logic, relationships, Power Query sources first), lists affected visuals by report and page, and drafts a review comment. Calls out relationship and source changes for manual checking, since automatic visual impact is only worked out for measures.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge read">Read-only</span><span class="badge s">Size: small</span></dd>
+        </dl>
+      </div>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Source Change Impact</h3><span class="slug">pbip-source-impact</span></div>
+        <p class="pitch">For data engineers: "this warehouse column is being renamed or dropped; what breaks?"</p>
+        <dl>
+          <dt>Why it helps</dt><dd>The Source Map already links every Power BI column to its original database table and column, including Power Query renames.</dd>
+          <dt>What it does</dt><dd>Finds the Power BI columns fed by a source column or table, then every measure and visual downstream of them, across all loaded reports. Produces a list the engineer can send to report owners.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge read">Read-only</span><span class="badge s">Size: small</span></dd>
+        </dl>
+      </div>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Measure Documentation</h3><span class="slug">pbip-document</span></div>
+        <p class="pitch">Writes plain-language descriptions for measures and produces a data dictionary.</p>
+        <dl>
+          <dt>Why it helps</dt><dd>Descriptions show as tooltips in Power BI and in catalogues like Atlan, but most models have few. The AI can draft them from the DAX plus the lineage context.</dd>
+          <dt>What it does</dt><dd>Drafts a description for each undocumented measure (what it calculates, key filters, source tables), lets the user approve or edit each one, writes them into the TMDL files, and can export a data dictionary page.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge edit">Edits model files (descriptions only)</span><span class="badge s">Size: medium</span></dd>
+        </dl>
+      </div>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Model Health Report</h3><span class="slug">pbip-health-report</span></div>
+        <p class="pitch">Produces a short, shareable health summary for a model or workspace.</p>
+        <dl>
+          <dt>What it does</dt><dd>Turns the Model Health numbers into a one-page report: orphan counts by status and their trend since the last report, most-depended-on measures (the riskiest to change), hidden fields still in use, and recent changes. Useful before a release or for a quarterly review.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge read">Read-only</span><span class="badge s">Size: small</span></dd>
+        </dl>
+      </div>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Duplicates &amp; Conventions</h3><span class="slug">pbip-conventions</span></div>
+        <p class="pitch">Finds near-duplicate measures and naming or folder inconsistencies.</p>
+        <dl>
+          <dt>What it does</dt><dd>Spots measures with identical or nearly identical DAX (three versions of "Total Sales" in different tables), checks names against a team convention, and suggests consolidating, with the impact of each consolidation shown first. Hands off to Rename &amp; Refactor to carry it out.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge read">Read-only (hands off edits)</span><span class="badge s">Size: medium</span></dd>
+        </dl>
+      </div>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Security Review</h3><span class="slug">pbip-rls-review</span></div>
+        <p class="pitch">Explains the model's row-level security in plain language.</p>
+        <dl>
+          <dt>What it does</dt><dd>Lists each RLS role, the tables it filters, and the measures and columns its rules depend on. Warns when a pending change touches anything an RLS rule uses, which is the kind of change that can quietly widen what users can see.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge read">Read-only</span><span class="badge s">Size: small</span></dd>
+        </dl>
+      </div>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Report Onboarding</h3><span class="slug">pbip-onboarding</span></div>
+        <p class="pitch">Gives a new analyst a guided tour of an unfamiliar report.</p>
+        <dl>
+          <dt>What it does</dt><dd>Walks page by page: what each page shows, the handful of key measures behind it, where the data comes from, and which measures everything else is built on. Answers questions as it goes, using the Lineage Guide's lookups.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge read">Read-only</span><span class="badge s">Size: small</span></dd>
+        </dl>
+      </div>
+
+      <div class="skill">
+        <div class="skill-head"><h3>Atlan Sync</h3><span class="slug">pbip-atlan-sync</span></div>
+        <p class="pitch">Pushes the app's measure-to-measure dependencies and orphan status into Atlan.</p>
+        <dl>
+          <dt>Why it helps</dt><dd>Atlan's documentation does not describe measure-to-measure lineage or orphan detection. This fills that gap for everyone who uses the catalogue (see the Atlan comparison guide).</dd>
+          <dt>What it does</dt><dd>Matches PBIP measures to Atlan's <code>PowerBIMeasure</code> assets by model, table, and measure name, shows the proposed updates for approval, and writes them through Atlan's Python SDK. Can also pull Atlan's report view counts back in to sharpen cleanup decisions.</dd>
+          <dt>Labels</dt><dd class="badges"><span class="badge ext">Writes to Atlan</span><span class="badge req">Needs Atlan API access</span><span class="badge s">Size: large</span></dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section id="examples">
+      <h2>6. Example conversations</h2>
+      <p>Illustrations of the intended behaviour. The counts, names, and dependencies come from running the current engine on the app's bundled sample project; the wording is illustrative, since no skill exists yet.</p>
+
+      <div class="chat" aria-label="Example: orphan cleanup">
+        <div class="label">Orphan Cleanup</div>
+        <div class="msg user"><span class="who">User</span><p>Help me clean up unused measures in this model.</p></div>
+        <div class="msg bot"><span class="who">Assistant</span>
+          <p>I checked the loaded project (1 report, 7 measures):</p>
+          <ul>
+            <li><strong>True orphans: 3.</strong> Product Count, Selected Metric, Unused Metric. Nothing references them.</li>
+            <li><strong>Visual orphans: 1.</strong> Total Quantity. Other things reference it, but none of them reach a visual.</li>
+            <li><strong>Filter/RLS only: 0.</strong></li>
+            <li>There are also <strong>6 unused columns</strong>, listed separately.</li>
+          </ul>
+          <p>I only checked this folder. If other reports use this model, load their folders before deleting anything. Which statuses do you want to review?</p>
+        </div>
+        <div class="msg user"><span class="who">User</span><p>Just the true orphans for now.</p></div>
+        <div class="msg bot"><span class="who">Assistant</span>
+          <p>Three to go through, one at a time.</p>
+          <p><strong>1. Unused Metric</strong> (Sales): <code>COUNTROWS(Sales) * 0</code>. It always returns 0. Delete, keep, or skip?</p>
+        </div>
+        <div class="msg user"><span class="who">User</span><p>Delete.</p></div>
+        <div class="msg bot"><span class="who">Assistant</span>
+          <p><strong>2. Product Count</strong> (Products): <code>DISTINCTCOUNT(Products[ProductID])</code>. Looks like a real metric that was never placed on a page. Delete, keep, or skip?</p>
+        </div>
+        <div class="msg user"><span class="who">User</span><p>Delete.</p></div>
+        <div class="msg bot"><span class="who">Assistant</span>
+          <p><strong>3. Selected Metric</strong> (Sales Metrics) is the SWITCH measure for the <em>Sales Metrics</em> field parameter. No visual uses it. Note: it is one of the two things referencing <em>Total Quantity</em>. The other is the parameter's own <em>Metric</em> column, so deleting it would not change Total Quantity's status. Delete, keep, or skip?</p>
+        </div>
+        <div class="msg user"><span class="who">User</span><p>Keep that one, someone may be building a page with it.</p></div>
+        <div class="msg bot"><span class="who">Assistant</span>
+          <p>Kept. Before I edit: is the project closed in Power BI Desktop? Desktop can overwrite file edits when it saves.</p>
+        </div>
+        <div class="msg user"><span class="who">User</span><p>It's closed.</p></div>
+        <div class="msg bot"><span class="who">Assistant</span>
+          <p>Done on branch <code>cleanup/orphans</code>: removed <em>Unused Metric</em> from <code>Sales.tmdl</code> and <em>Product Count</em> from <code>Products.tmdl</code>. I re-ran the analysis: 1 true orphan remains (Selected Metric, kept on purpose), Total Quantity is still a visual orphan, and no visual lost a field. A cleanup log is ready for the pull request.</p>
+        </div>
+      </div>
+
+      <div class="chat" aria-label="Example: safe measure change">
+        <div class="label">Safe Measure Change</div>
+        <div class="msg user"><span class="who">User</span><p>Change Total Sales to exclude zero amounts.</p></div>
+        <div class="msg bot"><span class="who">Assistant</span>
+          <p>Before I change it, here is what depends on <strong>Total Sales</strong>:</p>
+          <ul>
+            <li><strong>3 dependents:</strong> YoY Growth (uses it twice), Selected Metric, and the <em>Sales Metrics</em> field parameter's Metric column, which lists it as an option.</li>
+            <li><strong>4 visuals:</strong> Sales by Category and Sales Detail on <em>Sales Overview</em>; Sales by Region and YoY Growth Trend on <em>Customer Analysis</em>.</li>
+            <li>No active filters or RLS rules use it.</li>
+          </ul>
+          <p>Every number on those 4 visuals will change. Current: <code>SUM(Sales[Amount])</code>. Proposed: <code>CALCULATE(SUM(Sales[Amount]), Sales[Amount] &lt;&gt; 0)</code>. Apply it?</p>
+        </div>
+      </div>
+
+      <div class="chat" aria-label="Example: visual naming">
+        <div class="label">Visual Naming (hypothetical report; the bundled sample's visuals are already titled)</div>
+        <div class="msg user"><span class="who">User</span><p>Lots of visuals on the Finance report just say "Table" or "Matrix" in the lineage. Can you give them proper names?</p></div>
+        <div class="msg bot"><span class="who">Assistant</span>
+          <p>I found 6 data visuals with default names across 2 pages. Here are the proposed names:</p>
+          <ul>
+            <li><em>Overview</em> · <code>pivotTable</code>, no title → <strong>Revenue &amp; Margin % by Region, Month</strong></li>
+            <li><em>Overview</em> · <code>tableEx</code> "Table" → <strong>Top customers by Revenue</strong></li>
+            <li><em>Overview</em> · <code>card</code>, no title → <strong>Total Revenue</strong></li>
+            <li><em>Detail</em> · <code>tableEx</code>, no title → <strong>Invoice detail (9 columns)</strong></li>
+            <li><em>Detail</em> · <code>slicer</code>, no title → <strong>Slicer: Fiscal Year</strong></li>
+            <li><em>Detail</em> · <code>pivotTable</code> "Matrix" → <strong>Budget vs Actual by Cost Centre</strong></li>
+          </ul>
+          <p>By default I'll store these as hidden titles, so the report looks exactly the same. Accept all, or change any?</p>
+        </div>
+        <div class="msg user"><span class="who">User</span><p>Call the second one "Top 10 customers" and accept the rest.</p></div>
+        <div class="msg bot"><span class="who">Assistant</span>
+          <p>Updated. Is the project closed in Power BI Desktop?</p>
+        </div>
+        <div class="msg user"><span class="who">User</span><p>Yes.</p></div>
+        <div class="msg bot"><span class="who">Assistant</span>
+          <p>Done on branch <code>naming/finance-visuals</code>: 6 titles written, all hidden. I re-ran the analysis: 0 default-named data visuals remain on this report, and every visual has the same fields as before. Reload the folder in the app to see the new names in the Measure Map and lineage tree.</p>
+        </div>
+      </div>
+
+      <div class="chat" aria-label="Example: lineage guide">
+        <div class="label">Lineage Guide, with "Copy for AI"</div>
+        <div class="msg user"><span class="who">User</span><p>[pastes the app's copied context for YoY Growth] Why does this list only one upstream measure? The DAX mentions Total Sales twice.</p></div>
+        <div class="msg bot"><span class="who">Assistant</span>
+          <p>YoY Growth compares this year's <strong>Total Sales</strong> with last year's, so it calls Total Sales twice, but it is still one measure, so it is listed once. It also depends on two columns: <strong>DateTable[Date]</strong>, used to shift the period, and <strong>Sales[Amount]</strong>, which it reaches through Total Sales. It appears on one visual, the YoY Growth Trend line chart on <em>Customer Analysis</em>. Changing Total Sales would change this measure too.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section id="overview">
+      <h2>7. All skills at a glance</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Skill</th><th>Main user</th><th>Changes files?</th><th>Size</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Lineage Guide</strong></td><td>Everyone</td><td class="nw"><span class="badge read">No</span></td><td>Small</td></tr>
+          <tr><td><strong>Orphan Cleanup</strong></td><td>Report developers</td><td class="nw"><span class="badge edit">Model</span></td><td>Medium</td></tr>
+          <tr><td><strong>Safe Measure Change</strong></td><td>Report developers</td><td class="nw"><span class="badge edit">Model</span></td><td>Medium</td></tr>
+          <tr><td><strong>Rename &amp; Refactor</strong></td><td>Report developers</td><td class="nw"><span class="badge edit">Model + reports</span></td><td>Large</td></tr>
+          <tr><td><strong>Visual Naming</strong></td><td>Report developers</td><td class="nw"><span class="badge edit">Report titles only</span></td><td>Medium</td></tr>
+          <tr><td><strong>Change Review</strong></td><td>Reviewers, leads</td><td class="nw"><span class="badge read">No</span></td><td>Small</td></tr>
+          <tr><td><strong>Source Change Impact</strong></td><td>Data engineers</td><td class="nw"><span class="badge read">No</span></td><td>Small</td></tr>
+          <tr><td><strong>Measure Documentation</strong></td><td>Developers, governance</td><td class="nw"><span class="badge edit">Descriptions only</span></td><td>Medium</td></tr>
+          <tr><td><strong>Model Health Report</strong></td><td>Leads, governance</td><td class="nw"><span class="badge read">No</span></td><td>Small</td></tr>
+          <tr><td><strong>Duplicates &amp; Conventions</strong></td><td>Developers, governance</td><td class="nw"><span class="badge read">No</span></td><td>Medium</td></tr>
+          <tr><td><strong>Security Review</strong></td><td>Security, governance</td><td class="nw"><span class="badge read">No</span></td><td>Small</td></tr>
+          <tr><td><strong>Report Onboarding</strong></td><td>New analysts</td><td class="nw"><span class="badge read">No</span></td><td>Small</td></tr>
+          <tr><td><strong>Atlan Sync</strong></td><td>Governance</td><td class="nw"><span class="badge ext">Writes to Atlan</span></td><td>Large</td></tr>
+        </tbody>
+      </table></div>
+      <p>Sizes are relative. Small means mostly writing the skill's instructions on top of the CLI; large means new matching or editing logic that needs its own tests.</p>
+    </section>
+
+    <!-- 8 -->
+    <section id="roadmap">
+      <h2>8. Suggested roadmap</h2>
+      <p>Read-only skills first. They are low risk, prove the approach, and build trust before anything edits a model.</p>
+      <div class="phases">
+        <div class="phase"><div class="when">Phase 0<small>foundation</small></div><div><h4>Lineage CLI and "Copy for AI"</h4><p>Wrap the engine in a command-line tool with JSON output, add tests that its answers match the app's, and add the copy button to the app. Nothing else works without this.</p></div></div>
+        <div class="phase"><div class="when">Phase 1<small>read-only</small></div><div><h4>Lineage Guide, Change Review, Source Change Impact, Model Health Report</h4><p>Useful on day one, cannot damage anything, and exercise every CLI command.</p></div></div>
+        <div class="phase"><div class="when">Phase 2<small>assisted edits</small></div><div><h4>Safe Measure Change, Orphan Cleanup, Visual Naming, Measure Documentation</h4><p>Introduce edits with the full ground rules: impact first, per-item confirmation, branch, re-run, before/after. Visual Naming is a good first edit skill: in hidden-title mode it changes nothing a report reader sees, and it makes every later lineage view easier to read.</p></div></div>
+        <div class="phase"><div class="when">Phase 3<small>wider reach</small></div><div><h4>Rename &amp; Refactor, Duplicates &amp; Conventions, Security Review, Onboarding, Atlan Sync</h4><p>Cross-file edits and external integrations, once the edit pattern has a track record.</p></div></div>
+      </div>
+    </section>
+
+    <!-- 9 -->
+    <section id="risks">
+      <h2>9. Risks and open questions</h2>
+      <div class="callout warn">
+        <p><strong>This changes the privacy story</strong>Today the app's strongest selling point is that nothing leaves the user's machine. An AI assistant sends what it reads (DAX, table and column names, connection details, RLS rules) to the AI provider to generate its answers. That needs to be approved under the organisation's AI usage policy and covered by an enterprise agreement before any of these skills are used on real models. The app itself stays 100% local either way.</p>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>The AI writes incorrect DAX</td><td>Show old and new side by side, require approval, re-run the lineage check, and list visuals to test in Desktop. The skill never publishes.</td></tr>
+          <tr><td>Deleting something used outside the loaded files</td><td>Every cleanup repeats the "only what's loaded" limit, defaults to True orphans only, and can cross-check report usage in Atlan where available.</td></tr>
+          <tr><td>Power BI Desktop overwrites edits</td><td>Ground rule: confirm the project is closed before editing.</td></tr>
+          <tr><td>PBIR or TMDL format changes in a future Power BI release</td><td>Edits go through tested helpers rather than free-form text replacement; the CLI's test suite catches format drift.</td></tr>
+          <tr><td>Users over-trust the assistant</td><td>Branches and pull requests keep a human review step; skills explain their reasoning and cite the engine's output.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Questions to settle before building</h3>
+      <ul>
+        <li>Which AI assistant is approved for use with model metadata, and does its agreement cover it?</li>
+        <li>Should edit skills be available to everyone, or only to report developers?</li>
+        <li>Is there a team naming convention to encode in the Duplicates &amp; Conventions skill?</li>
+        <li>Is Atlan API access available for a sync, and who would own that integration?</li>
+      </ul>
+    </section>
+
+    <footer>
+      Prepared October 2026 as a proposal for future additions to the in-house PBIP Lineage Explorer (<code>PBIP_Lineage_Explorer_Application</code>). Engine function names refer to the current <code>packages/core</code> public API. Nothing in this document is built yet.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

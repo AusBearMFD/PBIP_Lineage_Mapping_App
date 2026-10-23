@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PBIP Lineage Explorer User Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: left-rail contents on wide screens, single column on phones. Dark-first, matching the app. */
+  :root {
+    --bg: #121623; --surface: #1a1f2e; --surface-2: #232a3b; --fg: #e7eaf1; --fg-muted: #a3abbd; --line: #313a4e;
+    --accent: #5cc3cf; --accent-soft: #163a41; --measure: #f2a93b; --measure-soft: #3b2c12;
+    --warn: #f08a74; --warn-soft: #42241d; --ok: #7fcf8f; --ok-soft: #1d3625; --info: #7fb3ff; --info-soft: #1d2d4a;
+    --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f4f6f9; --surface: #ffffff; --surface-2: #e9edf3; --fg: #1b2130; --fg-muted: #5a6478; --line: #d3d9e3;
+      --accent: #0b6e7a; --accent-soft: #d6ecef; --measure: #b06400; --measure-soft: #fdefd9;
+      --warn: #a3412d; --warn-soft: #fbe5e0; --ok: #2f7a3e; --ok-soft: #dff1e2; --info: #2b63c4; --info-soft: #dde8fb;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f6f9; --surface: #ffffff; --surface-2: #e9edf3; --fg: #1b2130; --fg-muted: #5a6478; --line: #d3d9e3;
+    --accent: #0b6e7a; --accent-soft: #d6ecef; --measure: #b06400; --measure-soft: #fdefd9;
+    --warn: #a3412d; --warn-soft: #fbe5e0; --ok: #2f7a3e; --ok-soft: #dff1e2; --info: #2b63c4; --info-soft: #dde8fb;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; margin: 0; }
+  a { color: var(--accent); }
+  code, kbd { font-family: var(--font-mono); font-size: 0.9em; background: var(--surface-2); padding: 1px 6px; border-radius: 4px; }
+  kbd { border: 1px solid var(--line); border-bottom-width: 2px; }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding-block: 32px 64px; padding-inline: 20px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 40px; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); } .toc { position: static !important; } }
+  .toc { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; font-size: 14px; padding-top: 8px; }
+  .toc .label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); font-weight: 600; margin-bottom: 8px; }
+  .toc ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+  .toc a { color: var(--fg); text-decoration: none; display: block; padding: 3px 0 3px 10px; border-left: 2px solid var(--line); }
+  .toc a:hover { border-left-color: var(--accent); color: var(--accent); }
+
+  main { min-width: 0; }
+  header.hero { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 36px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  h1 { font-size: clamp(28px, 4vw, 38px); line-height: 1.15; margin: 6px 0 12px; text-wrap: balance; font-weight: 700; }
+  .lede { font-size: 18px; color: var(--fg-muted); max-width: 66ch; margin: 0; }
+
+  section { margin-bottom: 48px; }
+  h2 { font-size: 24px; margin: 0 0 14px; padding-top: 8px; scroll-margin-top: 16px; text-wrap: balance; }
+  h3 { font-size: 17px; margin: 24px 0 8px; }
+  p, li { max-width: 70ch; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 5px; }
+  ol.steps li { margin-bottom: 8px; }
+
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; }
+  .callout.measure { border-color: var(--measure); background: var(--measure-soft); }
+  .callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .callout.ok { border-color: var(--ok); background: var(--ok-soft); }
+  .callout p { margin: 0; }
+  .callout strong:first-child { display: block; margin-bottom: 4px; }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 14px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { background: var(--surface-2); font-weight: 600; font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 14px 0; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+  .card h4 { margin: 0 0 6px; font-size: 15px; }
+  .card p { margin: 0; font-size: 14.5px; color: var(--fg-muted); }
+
+  .task { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin: 14px 0; }
+  .task h3 { margin-top: 0; }
+  .task .goal { color: var(--fg-muted); font-size: 14.5px; margin: 0 0 10px; }
+
+  .ladder { display: grid; gap: 10px; margin: 16px 0; }
+  .rung { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; border-left-width: 5px; }
+  @media (max-width: 560px) { .rung { grid-template-columns: minmax(0, 1fr); } }
+  .rung .name { font-weight: 700; }
+  .rung .name small { display: block; font-weight: 500; color: var(--fg-muted); font-size: 12px; margin-top: 2px; }
+  .rung p { margin: 0; font-size: 14.5px; }
+  .rung.ok { border-left-color: var(--ok); } .rung.info { border-left-color: var(--info); }
+  .rung.warn { border-left-color: var(--measure); } .rung.bad { border-left-color: var(--warn); }
+
+  details { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 10px 14px; margin: 10px 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p:last-child { margin-bottom: 0; }
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 16px; font-size: 13.5px; color: var(--fg-muted); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <div class="label">Contents</div>
+    <ol>
+      <li><a href="#what">1. What it does</a></li>
+      <li><a href="#start">2. Getting started</a></li>
+      <li><a href="#screen">3. Around the screen</a></li>
+      <li><a href="#tasks">4. Common tasks</a></li>
+      <li><a href="#status">5. Measure status &amp; orphans</a></li>
+      <li><a href="#tips">6. Tips &amp; shortcuts</a></li>
+      <li><a href="#trust">7. Privacy &amp; license, briefly</a></li>
+      <li><a href="#faq">8. FAQ</a></li>
+      <li><a href="#glossary">9. Glossary</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">User guide</div>
+      <h1>PBIP Lineage Explorer</h1>
+      <p class="lede">See where every number on a Power BI report comes from, and what would be affected if you changed it. This guide covers how to open a project, read the screens, and get answers to the questions people ask most.</p>
+    </header>
+
+    <!-- 1 -->
+    <section id="what">
+      <h2>1. What it does</h2>
+      <p>When a Power BI report is saved as a <strong>PBIP project</strong> (a folder of text files rather than one <code>.pbix</code>), the Lineage Explorer can read that folder and show you how everything connects:</p>
+      <ul>
+        <li><strong>Visual → measure → column → source.</strong> Click any chart and trace its numbers back through the DAX measures to the table columns and, finally, to the database table and column they came from, even if a column was renamed in Power Query.</li>
+        <li><strong>Change impact.</strong> Pick a measure and see every other measure that depends on it and every visual, page, and report that would be affected by changing it.</li>
+        <li><strong>Unused measures and columns.</strong> Find what nothing uses, graded by how safely it could be removed.</li>
+        <li><strong>Recent changes.</strong> If the project is in git, see what changed in recent commits and which visuals that touched.</li>
+      </ul>
+      <div class="callout">
+        <p><strong>It only reads</strong>The tool never edits your Power BI files, never connects to a database, and never sends anything off your computer. Think of it as an X-ray, not a scalpel.</p>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section id="start">
+      <h2>2. Getting started</h2>
+      <h3>What you need</h3>
+      <ul>
+        <li><strong>Chrome or Edge.</strong> The tool uses a browser feature for reading folders that Firefox and Safari do not fully support.</li>
+        <li><strong>A PBIP project folder.</strong> In Power BI Desktop: <em>File → Save as</em>, choose the <em>.pbip</em> type. You get a folder containing a <code>Name.Report</code> folder and a <code>Name.SemanticModel</code> folder. If you have several reports that share one model, save them all into the same parent folder.</li>
+        <li><strong>Node.js</strong>, installed once, if you run the tool from your own PC with the launcher. If someone has hosted the tool on an internal web address for you, skip this.</li>
+      </ul>
+
+      <h3>Starting the tool on your PC</h3>
+      <ol class="steps">
+        <li>Open the tool's folder and double-click <code>start.bat</code> (Windows) or <code>start.command</code> (Mac).</li>
+        <li>The first run installs a few components and takes a couple of minutes. After that it starts in seconds.</li>
+        <li>Your browser opens at <code>http://localhost:5173</code>. Leave the black console window open while you use the tool; closing it stops the local server.</li>
+      </ol>
+
+      <h3>Opening a project</h3>
+      <ol class="steps">
+        <li>Click <strong>Open Project Folder</strong>.</li>
+        <li>Pick the folder that contains the <code>.Report</code> and <code>.SemanticModel</code> folders. To analyse several reports together, pick the parent folder that holds all of them. If more than one report is found and they use different models, the tool asks which to load.</li>
+        <li>The browser may ask "Let site view files?" Choose <strong>View files</strong>. This permission is for viewing only.</li>
+        <li>Wait a few seconds while the project is read. The sidebar fills with measures and visuals.</li>
+      </ol>
+      <p>No project handy? Click <strong>Try Sample Project</strong> on the welcome screen to explore a small built-in example. You can also drag a project folder onto the welcome screen.</p>
+    </section>
+
+    <!-- 3 -->
+    <section id="screen">
+      <h2>3. Around the screen</h2>
+      <div class="grid">
+        <div class="card"><h4>Toolbar (top)</h4><p>Project totals, and buttons for <em>Measure Map</em>, <em>Health</em>, <em>Source Map</em>, <em>Export All</em>, and keyboard help (<kbd>?</kbd>).</p></div>
+        <div class="card"><h4>Measures tab (left)</h4><p>Every DAX measure, grouped by table. Type to search by name or formula. Badges show a measure's status (see <a href="#status">section 5</a>). Tick <em>True orphans only</em> to see measures nothing uses.</p></div>
+        <div class="card"><h4>Visuals tab (left)</h4><p>Every visual, grouped by page (and by report when several are loaded). Hover a page's <em>Layout</em> button for a thumbnail; click it to see where each visual sits on the page.</p></div>
+        <div class="card"><h4>Dependents tab (left)</h4><p>A spreadsheet-style grid, one row per measure, with counts of what it depends on, what depends on it, and how many visuals, pages, reports, and filters it reaches. Click a column header to sort; export to CSV.</p></div>
+        <div class="card"><h4>Main panel</h4><p>Shows whatever you selected: an interactive tree diagram, a <em>Dependencies</em> strip, the DAX chain, the source-column table, and recent changes.</p></div>
+        <div class="card"><h4>Measure Map</h4><p>Full-screen map with one measure in the middle. Pick a measure from the list on the left or click one in the map to re-centre.</p></div>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section id="tasks">
+      <h2>4. Common tasks</h2>
+
+      <div class="task">
+        <h3>"Where does this chart get its numbers?"</h3>
+        <p class="goal">Trace a visual back to its source columns.</p>
+        <ol class="steps">
+          <li>Open the <strong>Visuals</strong> tab and click the visual (search by its title or type if the list is long).</li>
+          <li>The tree shows Visual → Measures → Tables/Columns → Power Query → Source. Scroll or drag to pan; use the + / − buttons or scroll wheel to zoom; click a node to collapse its branch.</li>
+          <li>Below the tree, the <strong>Source Columns</strong> section lists every source table and column feeding the visual, with any renames shown as <em>source name → Power BI name</em>.</li>
+          <li>Use <strong>Grouped by Source</strong> to see which databases and tables are involved at a glance.</li>
+        </ol>
+      </div>
+
+      <div class="task">
+        <h3>"What breaks if I change this measure?"</h3>
+        <p class="goal">See the full blast radius of a measure.</p>
+        <ol class="steps">
+          <li>Open the <strong>Measures</strong> tab and click the measure.</li>
+          <li>Read the <strong>Dependencies</strong> strip: four side-by-side lists of the visuals it reaches (with report and page), the measures that depend on it, the measures it uses, and the columns it uses.</li>
+          <li>For the picture version, click <strong>Measure Map</strong> in the toolbar (or the <em>Map</em> button next to the measure). The measure sits in the middle; everything that depends on it fans out to the right, ending at the visuals, labelled by report and page.</li>
+          <li>Click any other measure in the map to re-centre on it and follow the chain.</li>
+        </ol>
+      </div>
+
+      <div class="task">
+        <h3>"Which measures can we clean up?"</h3>
+        <p class="goal">Find unused measures and columns safely.</p>
+        <ol class="steps">
+          <li>Click <strong>Health</strong> in the toolbar. The orphan lists are split by how disconnected each measure is: <em>True Orphans</em> (safest to remove), <em>Visual Orphans</em> (investigate), <em>Filter / Security Orphans</em> (usually keep), and <em>Field / Column Orphans</em>.</li>
+          <li>Or in the <strong>Measures</strong> tab, tick <em>True orphans only</em>.</li>
+          <li>Before deleting anything, read <a href="#status">section 5</a>. The tool only knows about the reports you loaded.</li>
+        </ol>
+      </div>
+
+      <div class="task">
+        <h3>"Which database tables feed this report?"</h3>
+        <p class="goal">Get the full column-to-source mapping as a table.</p>
+        <ol class="steps">
+          <li>Click <strong>Source Map</strong> in the toolbar.</li>
+          <li>Search or sort the table of every Power BI column with its original source column, source table, database, and server.</li>
+          <li>Click <strong>Export CSV</strong> to hand the list to a data engineer or paste it into documentation.</li>
+        </ol>
+      </div>
+
+      <div class="task">
+        <h3>"How do all our measures relate to each other?"</h3>
+        <p class="goal">Compare every measure at once.</p>
+        <ol class="steps">
+          <li>Open the <strong>Dependents</strong> tab. Each row is one measure with its dependency counts and status.</li>
+          <li>Sort by <em>Dependents</em> to find the measures most other calculations rely on (the riskiest to change), or by <em>Visuals</em> to find the most displayed.</li>
+          <li>Click a row to open that measure. Use the export button for a CSV.</li>
+        </ol>
+      </div>
+
+      <div class="task">
+        <h3>"What changed recently?"</h3>
+        <p class="goal">Review commit-by-commit changes (git projects only).</p>
+        <ol class="steps">
+          <li>Open a project folder that is a git repository. After loading, the toolbar shows a "Scanning git history" note, then a count of commits and changes.</li>
+          <li>Measures and pages with recent changes get a numbered badge in the sidebar. Click a badge to see what changed and which visuals it affects.</li>
+          <li>When a measure is selected, a <strong>Recent Changes</strong> section appears below its lineage.</li>
+        </ol>
+      </div>
+
+      <div class="task">
+        <h3>Exporting and sharing</h3>
+        <ul>
+          <li><strong>Export All</strong> (toolbar): one CSV with every measure, its columns, and source mapping.</li>
+          <li><strong>Tree diagram</strong>: export buttons above the tree save it as SVG or PNG.</li>
+          <li><strong>Impact panel</strong> (the <em>↗ Impact</em> button on a measure): export a Markdown report of what depends on it.</li>
+          <li><strong>Links</strong>: the address bar updates as you click (for example <code>#measure=…</code>). Copy it to send a colleague straight to the same measure; they need the same project loaded.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section id="status">
+      <h2>5. Measure status and orphans</h2>
+      <p>Every measure gets one of four statuses. The tool works them out by following each measure forward through everything that uses it and checking what it finally reaches: a visual, an active filter, a security rule, or nothing.</p>
+
+      <div class="ladder">
+        <div class="rung ok"><div class="name">In use<small>no badge</small></div><p>Shown on at least one visual, directly or through another measure. Nothing to do.</p></div>
+        <div class="rung info"><div class="name">Filter / RLS<small>blue badge</small></div><p>Not shown on any visual, but it is actively filtering a visual, page, or report, or it is part of a row-level-security rule that controls who sees what. It is doing real work. <strong>Usually keep.</strong></p></div>
+        <div class="rung warn"><div class="name">No visual<small>amber badge</small></div><p>Other measures reference it, but none of them end up on a visual either. It is wired in, but nothing shows the result. <strong>Worth investigating</strong>: either the whole chain is unused or something was disconnected by accident.</p></div>
+        <div class="rung bad"><div class="name">True orphan<small>red badge · "orphan"</small></div><p>Nothing references it at all: no visual, no measure, no filter, no security rule. <strong>Safest to remove</strong>, after the check below.</p></div>
+      </div>
+
+      <p>When people say "orphan" without qualifying it, they usually mean a <strong>True Orphan</strong>. The toolbar's orphan count adds up all three non-green statuses; the <strong>Health</strong> page splits them apart.</p>
+
+      <h3>Filters: set vs. just sitting there</h3>
+      <p>A field in the filter pane only counts as "in use" if the filter actually has a value applied (items ticked, a "greater than", a Top N, a relative date). A field parked in the pane with <em>(All)</em> selected is not filtering anything and is ignored, because the report would look the same without it.</p>
+
+      <h3>Unused columns</h3>
+      <p>The Health page also lists columns that nothing references. These are listed separately from measures because the fix is different: an unused column costs memory and refresh time; an unused measure just clutters the model.</p>
+
+      <div class="callout warn">
+        <p><strong>Before you delete</strong>The tool only sees the files you loaded. A measure used by another report you did not load, by an Excel connection, by a paginated report, or by another team's model will still show as an orphan here. Treat the lists as "nothing in these files uses this", and confirm with the report owners before removing anything.</p>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section id="tips">
+      <h2>6. Tips and shortcuts</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Does</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>/</kbd></td><td>Jump to the search box</td></tr>
+          <tr><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Enter</kbd></td><td>Move through the sidebar list and open an item</td></tr>
+          <tr><td><kbd>Alt</kbd> + <kbd>←</kbd></td><td>Go back to the previous selection (or use the ← button)</td></tr>
+          <tr><td><kbd>?</kbd></td><td>Show all keyboard shortcuts</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Close the current panel or overlay</td></tr>
+        </tbody>
+      </table></div>
+      <ul>
+        <li><strong>Search formulas, not just names.</strong> The Measures search also matches DAX text, so searching <code>USERELATIONSHIP</code> or a column name finds every measure that uses it.</li>
+        <li><strong>Source-first view.</strong> Above the tree, toggle <em>Source-First View</em> to draw the diagram starting from the database and flowing toward the visual. Handy when walking through a report with a data engineer.</li>
+        <li><strong>Hidden fields.</strong> Hidden measures and columns are shown with a muted style. On the page layout view there is a checkbox to show or hide hidden visuals.</li>
+        <li><strong>Load the whole workspace.</strong> If several reports share a model, open their parent folder so impact and orphan results cover all of them at once.</li>
+      </ul>
+    </section>
+
+    <!-- 7 -->
+    <section id="trust">
+      <h2>7. Privacy and license, briefly</h2>
+      <div class="grid">
+        <div class="card"><h4>Your files stay on your computer</h4><p>The tool runs entirely inside your browser tab. It reads the folder you choose (view only), works in memory, and sends nothing anywhere. There is no login, no server, no tracking. Close the tab and the data is gone.</p></div>
+        <div class="card"><h4>It never changes anything</h4><p>It cannot edit Power BI files and does not connect to databases. The only files it creates are the exports you ask for.</p></div>
+        <div class="card"><h4>Handle exports with care</h4><p>Exports and screenshots contain table names, formulas, and connection details (server and database names). Treat them like any internal design document.</p></div>
+        <div class="card"><h4>Free to use</h4><p>Open-source under the MIT license. It can be used, copied, and modified freely for internal work, with no cost and no obligation beyond keeping the license notice with the code. It comes with no warranty, so use its results as a guide, not as gospel.</p></div>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section id="faq">
+      <h2>8. FAQ</h2>
+      <details open><summary>"Open Project Folder" does nothing or shows an error.</summary><p>Make sure you are in Chrome or Edge and the address starts with <code>http://localhost</code> or <code>https://</code>. The folder picker does not work when the page is opened straight from a file share. Some managed browsers block the folder picker; if so, ask your IT team.</p></details>
+      <details><summary>Measures show "Load SemanticModel Folder" and no source columns.</summary><p>You opened a <code>.Report</code> folder on its own. Click <strong>Load SemanticModel Folder</strong> in the banner and pick the matching <code>.SemanticModel</code> folder, or re-open the parent folder that contains both.</p></details>
+      <details><summary>A measure I know is used shows as an orphan.</summary><p>Most often the report that uses it was not loaded. Open the parent folder containing all related reports. If it is used only in a filter, check that the filter has a value applied; an unset filter does not count. See section 5.</p></details>
+      <details><summary>The tree is huge and hard to read.</summary><p>Click nodes to collapse branches you do not need, use <em>Fit</em> to zoom to the whole tree, or switch to the Measure Map for a flatter view centred on one measure. Export to SVG for a zoomable image.</p></details>
+      <details><summary>The change history says "No recent changes" or does not appear.</summary><p>The folder must be a git repository (contain a <code>.git</code> folder) with commits that touched the PBIP files. The tool reads only local history; it does not fetch from a remote.</p></details>
+      <details><summary>Can I share a view with a colleague?</summary><p>Copy the address bar link after selecting something. Your colleague opens the tool, loads the same project folder, and the link jumps to the same selection.</p></details>
+      <details><summary>Does it work without internet?</summary><p>Yes. Once the page is open, nothing needs a connection.</p></details>
+    </section>
+
+    <!-- 9 -->
+    <section id="glossary">
+      <h2>9. Glossary</h2>
+      <div class="table-wrap"><table>
+        <tbody>
+          <tr><td><strong>PBIP</strong></td><td>Power BI Project. A report saved as a folder of text files instead of one <code>.pbix</code>.</td></tr>
+          <tr><td><strong>Semantic model</strong></td><td>The data side of a report: tables, columns, measures, relationships, security rules, and the queries that load data.</td></tr>
+          <tr><td><strong>Report</strong></td><td>The visual side: pages, charts, slicers, filters.</td></tr>
+          <tr><td><strong>Measure</strong></td><td>A named DAX calculation, such as <em>Total Sales</em>. Measures can use other measures.</td></tr>
+          <tr><td><strong>DAX</strong></td><td>The formula language measures are written in.</td></tr>
+          <tr><td><strong>Visual</strong></td><td>Any chart, card, table, or slicer on a page.</td></tr>
+          <tr><td><strong>Filter pane</strong></td><td>The panel where fields can be added to filter a visual, a page, or the whole report.</td></tr>
+          <tr><td><strong>RLS</strong></td><td>Row-level security: rules that limit which rows each user can see.</td></tr>
+          <tr><td><strong>Field parameter</strong></td><td>A dropdown that lets a reader swap which measure a visual shows.</td></tr>
+          <tr><td><strong>Power Query</strong></td><td>The step that loads and shapes data before it reaches the model; where columns are often renamed.</td></tr>
+          <tr><td><strong>Lineage</strong></td><td>The chain from a number on screen back to the source column it came from.</td></tr>
+          <tr><td><strong>True orphan</strong></td><td>A measure that nothing in the loaded files references at all.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <footer>
+      PBIP Lineage Explorer user guide, October 2026. Based on the open-source PBIP Lineage Explorer by Jihwan Kim (MIT license), customised in-house.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

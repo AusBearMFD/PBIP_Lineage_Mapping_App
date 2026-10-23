@@ -27,6 +27,15 @@ import { NODE_TYPES, EDGE_TYPES, LAYER_COLORS, ENRICHMENT_TYPES } from './utils/
 import { detectChanges } from './diff/changeDetector.js';
 import { CHANGE_TYPES, CHANGE_SCOPES } from './diff/changeTypes.js';
 import { resolveImpact } from './diff/impactResolver.js';
+import { CHANGE_TOPICS, topicForChange, changeAction, groupChangesByTopic } from './diff/changeTopics.js';
+import { diffLines, collapseUnchanged } from './diff/textDiff.js';
+
+// Version Compare (full-snapshot comparison)
+import { buildSnapshot, buildModelFromStructure, describeFilterCondition, visualFields, visualLabel } from './compare/snapshot.js';
+import { buildDependencyIndex, describeImpact, IMPACT_GROUPS } from './compare/dependencyImpact.js';
+import { modelDiagramData, diffModelDiagram, summarizeDiagramDiff, layoutModelDiagram, cardinalityLabel, crossFilterLabel } from './compare/modelDiagram.js';
+import { describeBookmarkEffect } from './compare/bookmarkEffect.js';
+import { compareSnapshots, compareFileMaps, groupCompareRecords, COMPARE_GROUPS, prettyVisualType } from './compare/compareSnapshots.js';
 
 // Re-export everything
 export {
@@ -46,6 +55,12 @@ export {
   NODE_TYPES, EDGE_TYPES, LAYER_COLORS, ENRICHMENT_TYPES,
   // Change Detection
   detectChanges, CHANGE_TYPES, CHANGE_SCOPES, resolveImpact,
+  CHANGE_TOPICS, topicForChange, changeAction, groupChangesByTopic, diffLines, collapseUnchanged,
+  // Version Compare
+  buildSnapshot, compareSnapshots, compareFileMaps, groupCompareRecords, COMPARE_GROUPS,
+  prettyVisualType, describeFilterCondition, visualFields, visualLabel, describeBookmarkEffect,
+  buildModelFromStructure, buildDependencyIndex, describeImpact, IMPACT_GROUPS,
+  modelDiagramData, diffModelDiagram, summarizeDiagramDiff, layoutModelDiagram, cardinalityLabel, crossFilterLabel,
 };
 
 /**

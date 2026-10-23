@@ -26,7 +26,11 @@ import { initImpactPanel, openImpactPanel } from './ui/impactPanel.js';
 import { initModelHealth, toggleModelHealth, closeModelHealth } from './ui/modelHealth.js';
 import { initMeasureMap, renderMeasureMap, setCenterMeasure as setMeasureMapCenter } from './ui/measureMap.js';
 import { initDependentsView, populateDependents, renderDependentsView } from './ui/dependentsView.js';
+import { initChangeHistory, setChangeHistoryData, renderChangeHistory, getChangeHistoryCount } from './ui/changeHistoryView.js';
+import { initVersionCompare, setVersionCompareData, renderVersionCompare, getVersionCompareStatus } from './ui/versionCompareView.js';
+import { initModelDiagram, setModelDiagramModels, setModelDiagramHistory, renderModelDiagram, showModelDiagramChange } from './ui/modelDiagramView.js';
 import { scanGitHistory } from './parser/gitScanner.js';
+import { scanVersionHistory } from './parser/snapshotScanner.js';
 
 const state = {
   graph: null,
@@ -35,6 +39,10 @@ const state = {
   semanticModelPath: null,
   sourceMapVisible: false,
   measureMapVisible: false,
+  changeHistoryVisible: false,
+  versionCompareVisible: false,
+  modelDiagramVisible: false,
+  versionScanToken: 0, // bumps on each project load so a stale scan can't overwrite newer results
   workspace: null, // { reports, primaryModelKey, multiModel } — set when a multi-report workspace is loaded
   measureSelectCount: 0,
   navigationHistory: [], // stack of { type: 'measure'|'visual', id: string }
@@ -75,6 +83,9 @@ function init() {
   initModelHealth({ onMeasureNavigate: handleMeasureSelect });
   initMeasureMap({ onVisualNavigate: handleVisualSelect, onPageNavigate: handlePageLayoutSelect });
   initDependentsView({ onMeasureSelect: handleMeasureSelect });
+  initChangeHistory({ onMeasureNavigate: handleMeasureSelect, onVisualNavigate: handleVisualSelect });
+  initVersionCompare({ onRequestScan: startVersionScan, onShowInDiagram: openModelDiagramAt });
+  initModelDiagram({ onRequestHistory: startVersionScan });
 
   const btnLoadModel = document.getElementById('btn-load-model');
   if (btnLoadModel) btnLoadModel.addEventListener('click', handleLoadSemanticModel);
@@ -93,10 +104,26 @@ function init() {
   const btnMeasureMap = document.getElementById('btn-measure-map');
   if (btnMeasureMap) btnMeasureMap.addEventListener('click', toggleMeasureMap);
 
+  // Change History toggle
+  const btnChangeHistory = document.getElementById('btn-change-history');
+  if (btnChangeHistory) btnChangeHistory.addEventListener('click', toggleChangeHistory);
+
+  // Version Compare toggle
+  const btnVersionCompare = document.getElementById('btn-version-compare');
+  if (btnVersionCompare) btnVersionCompare.addEventListener('click', toggleVersionCompare);
+
+  // Model Diagram toggle
+  const btnModelDiagram = document.getElementById('btn-model-diagram');
+  if (btnModelDiagram) btnModelDiagram.addEventListener('click', toggleModelDiagram);
+
   // Model Health toggle
   const btnModelHealth = document.getElementById('btn-model-health');
   if (btnModelHealth) btnModelHealth.addEventListener('click', () => {
-    if (state.graph) toggleModelHealth(state.graph);
+    if (!state.graph) return;
+    exitChangeHistoryIfActive();
+    exitVersionCompareIfActive();
+    exitModelDiagramIfActive();
+    toggleModelHealth(state.graph);
   });
 
   // Bulk Export
@@ -154,6 +181,9 @@ function toggleSourceMap() {
 
   if (state.sourceMapVisible) {
     exitMeasureMapIfActive();
+    exitChangeHistoryIfActive();
+    exitVersionCompareIfActive();
+    exitModelDiagramIfActive();
     hideDependentsGrid();
     closeModelHealth();
     if (btn) btn.classList.add('active');
@@ -193,6 +223,9 @@ function toggleMeasureMap() {
       if (sourceBtn) sourceBtn.classList.remove('active');
       if (sourceMapContainer) sourceMapContainer.classList.add('hidden');
     }
+    exitChangeHistoryIfActive();
+    exitVersionCompareIfActive();
+    exitModelDiagramIfActive();
     hideDependentsGrid();
     closeModelHealth();
     if (btn) btn.classList.add('active');
@@ -219,6 +252,9 @@ function toggleMeasureMap() {
 function showDependentsGrid() {
   if (!state.graph) return;
   exitMeasureMapIfActive();
+  exitChangeHistoryIfActive();
+  exitVersionCompareIfActive();
+  exitModelDiagramIfActive();
   closeModelHealth();
   if (state.sourceMapVisible) {
     state.sourceMapVisible = false;
@@ -251,6 +287,208 @@ function hideDependentsGrid() {
   } else if (lineageEmpty) {
     lineageEmpty.classList.remove('hidden');
   }
+}
+
+// --- Change History (main panel, toolbar button) ---
+
+function toggleChangeHistory() {
+  if (!state.changeHistoryVisible && !state.graph) return;
+  state.changeHistoryVisible = !state.changeHistoryVisible;
+  const btn = document.getElementById('btn-change-history');
+  const lineageEmpty = document.getElementById('lineage-empty');
+  const lineageContent = document.getElementById('lineage-content');
+  const container = document.getElementById('change-history-container');
+
+  if (state.changeHistoryVisible) {
+    if (state.sourceMapVisible) {
+      state.sourceMapVisible = false;
+      document.getElementById('btn-source-map')?.classList.remove('active');
+      document.getElementById('source-map-container')?.classList.add('hidden');
+    }
+    exitMeasureMapIfActive();
+    exitVersionCompareIfActive();
+    exitModelDiagramIfActive();
+    hideDependentsGrid();
+    closeModelHealth();
+    if (btn) btn.classList.add('active');
+    if (lineageEmpty) lineageEmpty.classList.add('hidden');
+    if (lineageContent) lineageContent.classList.add('hidden');
+    if (container) {
+      container.classList.remove('hidden');
+      renderChangeHistory(container, state.graph);
+    }
+  } else {
+    if (btn) btn.classList.remove('active');
+    if (container) container.classList.add('hidden');
+    if (lineageContent && lineageContent.innerHTML.trim()) {
+      lineageContent.classList.remove('hidden');
+    } else if (lineageEmpty) {
+      lineageEmpty.classList.remove('hidden');
+    }
+  }
+}
+
+/** Exit the Change History view (used when another main-panel view takes over). */
+function exitChangeHistoryIfActive() {
+  if (!state.changeHistoryVisible) return;
+  state.changeHistoryVisible = false;
+  document.getElementById('btn-change-history')?.classList.remove('active');
+  document.getElementById('change-history-container')?.classList.add('hidden');
+}
+
+// --- Version Compare (main panel, toolbar button) ---
+
+function toggleVersionCompare() {
+  if (!state.versionCompareVisible && !state.graph) return;
+  state.versionCompareVisible = !state.versionCompareVisible;
+  const btn = document.getElementById('btn-version-compare');
+  const lineageEmpty = document.getElementById('lineage-empty');
+  const lineageContent = document.getElementById('lineage-content');
+  const container = document.getElementById('version-compare-container');
+
+  if (state.versionCompareVisible) {
+    if (state.sourceMapVisible) {
+      state.sourceMapVisible = false;
+      document.getElementById('btn-source-map')?.classList.remove('active');
+      document.getElementById('source-map-container')?.classList.add('hidden');
+    }
+    exitMeasureMapIfActive();
+    exitChangeHistoryIfActive();
+    exitModelDiagramIfActive();
+    hideDependentsGrid();
+    closeModelHealth();
+    if (btn) btn.classList.add('active');
+    if (lineageEmpty) lineageEmpty.classList.add('hidden');
+    if (lineageContent) lineageContent.classList.add('hidden');
+    if (container) {
+      container.classList.remove('hidden');
+      renderVersionCompare(container); // starts the snapshot scan on first open
+    }
+  } else {
+    if (btn) btn.classList.remove('active');
+    if (container) container.classList.add('hidden');
+    if (lineageContent && lineageContent.innerHTML.trim()) {
+      lineageContent.classList.remove('hidden');
+    } else if (lineageEmpty) {
+      lineageEmpty.classList.remove('hidden');
+    }
+  }
+}
+
+/** Exit the Version Compare view (used when another main-panel view takes over). */
+function exitVersionCompareIfActive() {
+  if (!state.versionCompareVisible) return;
+  state.versionCompareVisible = false;
+  document.getElementById('btn-version-compare')?.classList.remove('active');
+  document.getElementById('version-compare-container')?.classList.add('hidden');
+}
+
+// --- Model Diagram (main panel, toolbar button) ---
+
+function toggleModelDiagram() {
+  if (!state.modelDiagramVisible && !state.graph) return;
+  state.modelDiagramVisible = !state.modelDiagramVisible;
+  const btn = document.getElementById('btn-model-diagram');
+  const lineageEmpty = document.getElementById('lineage-empty');
+  const lineageContent = document.getElementById('lineage-content');
+  const container = document.getElementById('model-diagram-container');
+
+  if (state.modelDiagramVisible) {
+    if (state.sourceMapVisible) {
+      state.sourceMapVisible = false;
+      document.getElementById('btn-source-map')?.classList.remove('active');
+      document.getElementById('source-map-container')?.classList.add('hidden');
+    }
+    exitMeasureMapIfActive();
+    exitChangeHistoryIfActive();
+    exitVersionCompareIfActive();
+    hideDependentsGrid();
+    closeModelHealth();
+    if (btn) btn.classList.add('active');
+    if (lineageEmpty) lineageEmpty.classList.add('hidden');
+    if (lineageContent) lineageContent.classList.add('hidden');
+    if (container) {
+      container.classList.remove('hidden');
+      renderModelDiagram(container);
+    }
+  } else {
+    if (btn) btn.classList.remove('active');
+    if (container) container.classList.add('hidden');
+    if (lineageContent && lineageContent.innerHTML.trim()) {
+      lineageContent.classList.remove('hidden');
+    } else if (lineageEmpty) {
+      lineageEmpty.classList.remove('hidden');
+    }
+  }
+}
+
+/** Exit the Model Diagram view (used when another main-panel view takes over). */
+function exitModelDiagramIfActive() {
+  if (!state.modelDiagramVisible) return;
+  state.modelDiagramVisible = false;
+  document.getElementById('btn-model-diagram')?.classList.remove('active');
+  document.getElementById('model-diagram-container')?.classList.add('hidden');
+}
+
+/** From Version Compare: open the Model Diagram's commit view focused on a change. */
+function openModelDiagramAt(focus) {
+  showModelDiagramChange(focus);
+  if (state.modelDiagramVisible) renderModelDiagram(document.getElementById('model-diagram-container'));
+  else toggleModelDiagram();
+}
+
+/** Version history feeds both Version Compare and the Model Diagram's commit view. */
+function setVersionData(data) {
+  setVersionCompareData(data);
+  setModelDiagramHistory(data);
+}
+
+/** Display name of a semantic model folder ("Sales.SemanticModel" -> "Sales"). */
+function modelDisplayName(nameOrPath) {
+  return String(nameOrPath || '').split('/').pop().replace(/\.semanticmodel$/i, '') || 'Semantic model';
+}
+
+/** Give the Model Diagram the open project's semantic model(s). */
+function publishDiagramModels(entries) {
+  // Names pick models in the diagram, so make repeated folder names unique.
+  const counts = new Map();
+  for (const e of entries) counts.set(e.name, (counts.get(e.name) || 0) + 1);
+  setModelDiagramModels(entries.map(e => (counts.get(e.name) > 1 ? { ...e, name: e.key } : e)));
+}
+
+/**
+ * Read full snapshots of recent commits and compare each with its parent.
+ * Runs on first open of Version Compare (reading every PBIP file per version
+ * costs more than the Commit Edits scan, so it isn't done on every load).
+ */
+async function startVersionScan() {
+  if (getVersionCompareStatus() === 'scanning') return;
+  if (!state.rootHandle) {
+    setVersionData({ status: 'unavailable' });
+    return;
+  }
+  const token = ++state.versionScanToken;
+  setVersionData({ status: 'scanning', progress: 'Reading the repository…' });
+  try {
+    const { hasRepo, pairs } = await scanVersionHistory(state.rootHandle, {
+      onProgress: (progress) => { if (token === state.versionScanToken) setVersionData({ status: 'scanning', progress }); },
+    });
+    if (token !== state.versionScanToken) return; // a different project was loaded meanwhile
+    setVersionData({ status: 'ready', hasRepo, pairs });
+  } catch (err) {
+    if (token !== state.versionScanToken) return;
+    console.warn('Version Compare scan failed:', err);
+    setVersionData({ status: 'error' });
+  }
+}
+
+/** Show the number of detected changes on the toolbar button. */
+function updateChangeHistoryBadge() {
+  const badge = document.getElementById('change-history-count');
+  if (!badge) return;
+  const n = getChangeHistoryCount();
+  badge.textContent = n > 0 ? String(n) : '';
+  badge.classList.toggle('hidden', n === 0);
 }
 
 /** Exit the Measure Map view (used when navigating away via measure/visual/page selection). */
@@ -394,6 +632,10 @@ async function handleOpenFolder() {
     showLoading('Select the folder that contains your .Report and .SemanticModel folders...');
 
     const projectResult = await openProjectFolder();
+    // Remember the picked folder for the git scan. Kept in state (not just on
+    // projectResult) because the multi-report picker path loads later and
+    // would otherwise lose it.
+    state.rootHandle = projectResult.rootHandle || null;
 
     // Multiple reports found — show picker overlay
     if (projectResult.multipleReports) {
@@ -419,6 +661,7 @@ async function handleOpenFolder() {
 async function handleLoadSampleProject() {
   try {
     clearWelcomeError();
+    state.rootHandle = null; // the bundled sample has no git history
     showLoadingProgress('Loading sample project...', 10);
 
     // Fetch all sample files in parallel
@@ -555,6 +798,12 @@ async function loadWorkspaceResult({ reports, modelStructureByKey, primaryModelK
   showLoadingProgress(`Step 1/2: Analyzing ${reports.length} reports...`, 30);
 
   const { graph } = analyzeWorkspace({ reports, modelStructureByKey, primaryModelKey });
+  publishDiagramModels([...modelStructureByKey].map(([key, structure]) => ({
+    key,
+    name: modelDisplayName(key),
+    structure,
+    reports: reports.filter(r => r.modelKey === key).map(r => r.reportName),
+  })));
   state.graph = graph;
   state.workspace = graph.workspace;
   window.__graph = graph; // debug helper
@@ -607,6 +856,9 @@ async function loadWorkspaceResult({ reports, modelStructureByKey, primaryModelK
     const secondaryCount = graph.workspace.reports.filter(r => !r.isPrimaryModel).length;
     console.info(`Workspace loaded: ${reports.length} reports, ${modelStructureByKey.size} distinct semantic models (${secondaryCount} report${secondaryCount !== 1 ? 's' : ''} on a non-primary model).`);
   }
+
+  // Async git history scan (non-blocking) — workspaces are usually one repo.
+  startGitScan();
 }
 
 /**
@@ -634,6 +886,18 @@ function enableProjectToolbarButtons() {
   if (btnMeasureMapShow) {
     btnMeasureMapShow.disabled = false;
   }
+  const btnChangeHistoryShow = document.getElementById('btn-change-history');
+  if (btnChangeHistoryShow) {
+    btnChangeHistoryShow.disabled = false;
+  }
+  const btnVersionCompareShow = document.getElementById('btn-version-compare');
+  if (btnVersionCompareShow) {
+    btnVersionCompareShow.disabled = false;
+  }
+  const btnModelDiagramShow = document.getElementById('btn-model-diagram');
+  if (btnModelDiagramShow) {
+    btnModelDiagramShow.disabled = false;
+  }
 }
 
 /**
@@ -645,6 +909,12 @@ async function loadProjectResult(projectResult) {
   state.reportStructure = projectResult.reportStructure;
   state.reportName = projectResult.reportName;
   state.semanticModelPath = projectResult.semanticModelPath;
+  publishDiagramModels(modelStructure ? [{
+    key: projectResult.semanticModelPath || projectResult.modelName || 'model',
+    name: modelDisplayName(projectResult.modelName),
+    structure: modelStructure,
+    reports: projectResult.reportName ? [projectResult.reportName] : [],
+  }] : []);
 
   showLoadingProgress('Step 1/5: Parsing model...', 10);
 
@@ -749,9 +1019,26 @@ async function loadProjectResult(projectResult) {
   restoreFromHash();
 
   // Async git history scan (non-blocking)
-  if (projectResult.rootHandle) {
-    state.rootHandle = projectResult.rootHandle;
-    scanGitChanges(projectResult.rootHandle);
+  if (projectResult.rootHandle) state.rootHandle = projectResult.rootHandle;
+  startGitScan();
+}
+
+/**
+ * Start the git history scan for the current project folder, or reset the
+ * Change History view when the project has no readable folder (sample project,
+ * legacy drag-and-drop).
+ */
+function startGitScan() {
+  // Version Compare scans lazily (on first open); just discard old results here.
+  state.versionScanToken++;
+  setVersionData({ status: 'idle' });
+  if (state.versionCompareVisible || state.modelDiagramVisible) startVersionScan();
+
+  if (state.rootHandle) {
+    scanGitChanges(state.rootHandle);
+  } else {
+    setChangeHistoryData({ status: 'idle' });
+    updateChangeHistoryBadge();
   }
 }
 
@@ -760,7 +1047,10 @@ async function loadProjectResult(projectResult) {
 async function scanGitChanges(rootHandle) {
   try {
     showGitScanStatus('scanning');
-    const { flatChanges, measureChangeCounts } = await scanGitHistory(rootHandle, state.graph);
+    setChangeHistoryData({ status: 'scanning' });
+    const { flatChanges, measureChangeCounts, pairs, hasRepo } = await scanGitHistory(rootHandle, state.graph);
+    setChangeHistoryData({ status: 'ready', pairs, hasRepo });
+    updateChangeHistoryBadge();
     state.changeData = { flatChanges, measureChangeCounts };
     setChangeData(state.changeData);
     updateChangeCounts(measureChangeCounts);
@@ -811,6 +1101,8 @@ async function scanGitChanges(rootHandle) {
     }
   } catch (err) {
     showGitScanStatus('error');
+    setChangeHistoryData({ status: 'error' });
+    updateChangeHistoryBadge();
     console.warn('Git history scan skipped:', err.message);
   }
 }
@@ -871,6 +1163,12 @@ async function handleLoadSemanticModel() {
     showLoadingProgress('Parsing semantic model...', 30);
 
     const modelStructure = result.modelStructure;
+    publishDiagramModels(modelStructure ? [{
+      key: result.modelName || 'model',
+      name: modelDisplayName(result.modelName),
+      structure: modelStructure,
+      reports: state.reportName ? [state.reportName] : [],
+    }] : []);
     const tmdlFiles = modelStructure?.tmdlFiles || [];
     const relationshipFiles = modelStructure?.relationshipFiles || [];
     const expressionFiles = modelStructure?.expressionFiles || [];
@@ -957,6 +1255,9 @@ function handleMeasureSelect(measureId, { skipHistory = false } = {}) {
   }
   closeModelHealth();
   exitMeasureMapIfActive();
+  exitChangeHistoryIfActive();
+  exitVersionCompareIfActive();
+  exitModelDiagramIfActive();
   hideDependentsGrid();
 
   const node = state.graph.nodes.get(measureId);
@@ -1013,6 +1314,9 @@ function handleVisualSelect(visualId, { skipHistory = false } = {}) {
   }
   closeModelHealth();
   exitMeasureMapIfActive();
+  exitChangeHistoryIfActive();
+  exitVersionCompareIfActive();
+  exitModelDiagramIfActive();
   hideDependentsGrid();
 
   const node = state.graph.nodes.get(visualId);
@@ -1061,6 +1365,9 @@ function handlePageLayoutSelect(pageName, { skipHistory = false } = {}) {
   }
   closeModelHealth();
   exitMeasureMapIfActive();
+  exitChangeHistoryIfActive();
+  exitVersionCompareIfActive();
+  exitModelDiagramIfActive();
   hideDependentsGrid();
 
   // Resolve the page. An exact node-id match is tried first because page NAMES
@@ -1113,6 +1420,10 @@ function handlePageChangeBadgeClick(pageName) {
     if (sourceMapContainer) sourceMapContainer.classList.add('hidden');
   }
   closeModelHealth();
+  exitMeasureMapIfActive();
+  exitChangeHistoryIfActive();
+  exitVersionCompareIfActive();
+  exitModelDiagramIfActive();
 
   if (state.currentSelection) {
     state.navigationHistory.push(state.currentSelection);
@@ -1160,6 +1471,9 @@ function handleKeyDown(event) {
       return;
     }
     if (state.sourceMapVisible) toggleSourceMap();
+    else if (state.changeHistoryVisible) toggleChangeHistory();
+    else if (state.versionCompareVisible) toggleVersionCompare();
+    else if (state.modelDiagramVisible) toggleModelDiagram();
   }
 
   // Alt+Left to go back in navigation history
@@ -1389,6 +1703,7 @@ function initDragAndDrop() {
 async function handleDroppedDirectory(dirHandle) {
   try {
     clearWelcomeError();
+    state.rootHandle = dirHandle; // a dropped folder handle can be scanned for git history too
     showLoadingProgress('Reading dropped folder...', 10);
 
     const allFiles = new Map();
@@ -1468,6 +1783,7 @@ async function readDirectoryRecursive(dirHandle, basePath, result) {
 async function handleDroppedWebkitEntry(dirEntry) {
   try {
     clearWelcomeError();
+    state.rootHandle = null; // legacy drag-and-drop entries can't be read by the git scanner
     showLoadingProgress('Reading dropped folder...', 10);
 
     const allFiles = new Map();

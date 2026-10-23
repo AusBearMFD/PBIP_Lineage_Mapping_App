@@ -475,3 +475,51 @@ describe('Calculation group changes', () => {
     expect(added.target.calcItemName).toBe('MTD');
   });
 });
+
+// ───── Unit Tests: Repos with several reports / models ─────
+
+describe('Multiple reports and models', () => {
+  // Two copied reports share page and visual IDs; only report B's visual changes.
+  const visual = (filters) => JSON.stringify({ name: 'vis1', filterConfig: { filters } });
+  const filter = (name, field) => ({ name, field: { Column: { Expression: { SourceRef: { Entity: 'T' } }, Property: field } } });
+  const page = (displayName) => JSON.stringify({ name: 'Page1', displayName });
+  const files = (bFilters) => [
+    ['A.Report/definition/pages/Page1/page.json', page('Alpha page')],
+    ['A.Report/definition/pages/Page1/visuals/vis1/visual.json', visual([filter('f1', 'X')])],
+    ['B.Report/definition/pages/Page1/page.json', page('Beta page')],
+    ['B.Report/definition/pages/Page1/visuals/vis1/visual.json', visual(bFilters)],
+  ];
+
+  it('compares a visual only with the same visual in the same report', () => {
+    const before = new Map(files([filter('f2', 'Y')]));
+    const after = new Map(files([filter('f2', 'Y'), filter('f3', 'Z')]));
+    const { changes } = detectChanges(before, after);
+    const visualChanges = changes.filter(c => c.scope === 'visual');
+    expect(visualChanges).toHaveLength(1);
+    expect(visualChanges[0].type).toBe(CHANGE_TYPES.VISUAL_FILTER_ADDED);
+    expect(visualChanges[0].target.filterName).toBe('f3');
+    expect(visualChanges[0].target.pageName).toBe('Beta page');
+  });
+
+  it('gives the same result whatever order the files are listed in', () => {
+    const before = files([filter('f2', 'Y')]);
+    const after = files([filter('f2', 'Y'), filter('f3', 'Z')]);
+    const forward = detectChanges(new Map(before), new Map(after)).changes.length;
+    const reversed = detectChanges(new Map([...before].reverse()), new Map([...after].reverse())).changes.length;
+    expect(reversed).toBe(forward);
+  });
+
+  it('keeps same-named measures in different semantic models apart', () => {
+    const tmdl = (expr) => `table Measure\n\tmeasure Sales = ${expr}`;
+    const before = new Map([
+      ['A.SemanticModel/definition/tables/Measure.tmdl', tmdl('SUM(T[A])')],
+      ['B.SemanticModel/definition/tables/Measure.tmdl', tmdl('SUM(T[B])')],
+    ]);
+    const after = new Map([
+      ['A.SemanticModel/definition/tables/Measure.tmdl', tmdl('SUM(T[A])')],
+      ['B.SemanticModel/definition/tables/Measure.tmdl', tmdl('SUM(T[B]) * 2')],
+    ]);
+    const measureChanges = detectChanges(before, after).changes.filter(c => c.type === CHANGE_TYPES.MEASURE_CHANGED);
+    expect(measureChanges).toHaveLength(1);
+  });
+});

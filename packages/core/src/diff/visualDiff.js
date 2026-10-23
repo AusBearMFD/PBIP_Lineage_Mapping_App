@@ -20,12 +20,12 @@ export function detectVisualChanges(beforeFiles, afterFiles) {
   const afterVisuals = findAllVisualFiles(afterFiles);
 
   // Detect added visuals
-  for (const [visualId, info] of afterVisuals) {
-    if (!beforeVisuals.has(visualId)) {
+  for (const [key, info] of afterVisuals) {
+    if (!beforeVisuals.has(key)) {
+      const { visualId, pageId } = info;
       const config = parseJson(info.content);
       const title = extractVisualTitle(config) || visualId;
-      const pageId = info.pageId;
-      const pageName = resolvePageName(pageId, afterFiles);
+      const pageName = resolvePageName(info, afterFiles);
 
       changes.push(createChange({
         type: CHANGE_TYPES.VISUAL_ADDED,
@@ -37,12 +37,12 @@ export function detectVisualChanges(beforeFiles, afterFiles) {
   }
 
   // Detect removed visuals
-  for (const [visualId, info] of beforeVisuals) {
-    if (!afterVisuals.has(visualId)) {
+  for (const [key, info] of beforeVisuals) {
+    if (!afterVisuals.has(key)) {
+      const { visualId, pageId } = info;
       const config = parseJson(info.content);
       const title = extractVisualTitle(config) || visualId;
-      const pageId = info.pageId;
-      const pageName = resolvePageName(pageId, beforeFiles);
+      const pageName = resolvePageName(info, beforeFiles);
 
       changes.push(createChange({
         type: CHANGE_TYPES.VISUAL_REMOVED,
@@ -54,8 +54,8 @@ export function detectVisualChanges(beforeFiles, afterFiles) {
   }
 
   // Detect changes to existing visuals
-  for (const [visualId, afterInfo] of afterVisuals) {
-    const beforeInfo = beforeVisuals.get(visualId);
+  for (const [key, afterInfo] of afterVisuals) {
+    const beforeInfo = beforeVisuals.get(key);
     if (!beforeInfo) continue;
 
     // Skip if identical
@@ -65,9 +65,9 @@ export function detectVisualChanges(beforeFiles, afterFiles) {
     const afterConfig = parseJson(afterInfo.content);
     if (!beforeConfig || !afterConfig) continue;
 
+    const { visualId, pageId } = afterInfo;
     const title = extractVisualTitle(afterConfig) || extractVisualTitle(beforeConfig) || visualId;
-    const pageId = afterInfo.pageId;
-    const pageName = resolvePageName(pageId, afterFiles);
+    const pageName = resolvePageName(afterInfo, afterFiles);
     const target = { visualId, visualName: title, pageId, pageName };
 
     // Detect visibility changes
@@ -283,8 +283,11 @@ function extractVisualTitle(config) {
 }
 
 /**
- * Find all visual.json files grouped by visual ID.
- * Returns Map<visualId, { content, pageId, path }>
+ * Find all visual.json files, keyed by their visual folder path.
+ * Keyed by path rather than visual ID because the same visual ID can appear in
+ * several reports (copied report folders) — keying by ID alone let one
+ * report's visual overwrite another's and paired unrelated visuals.
+ * Returns Map<folderPath, { content, visualId, pageId, pageDir, path }>
  */
 function findAllVisualFiles(files) {
   const visuals = new Map();
@@ -296,8 +299,10 @@ function findAllVisualFiles(files) {
       if (visualsIdx !== -1 && visualsIdx + 1 < parts.length) {
         const visualId = parts[visualsIdx + 1];
         const pagesIdx = parts.findIndex(p => p.toLowerCase() === 'pages');
-        const pageId = (pagesIdx !== -1 && pagesIdx + 1 < parts.length) ? parts[pagesIdx + 1] : '';
-        visuals.set(visualId, { content, pageId, path });
+        const hasPage = pagesIdx !== -1 && pagesIdx + 1 < parts.length;
+        const pageId = hasPage ? parts[pagesIdx + 1] : '';
+        const pageDir = hasPage ? parts.slice(0, pagesIdx + 2).join('/') : '';
+        visuals.set(parts.slice(0, visualsIdx + 2).join('/'), { content, visualId, pageId, pageDir, path });
       }
     }
   }
@@ -305,10 +310,14 @@ function findAllVisualFiles(files) {
 }
 
 /**
- * Resolve a page ID to its display name.
+ * Resolve a visual's page to its display name: the page.json in the visual's
+ * own page folder, else any page.json with the same page ID (the page file may
+ * not be in a changed-files-only map).
  */
-function resolvePageName(pageId, files) {
+function resolvePageName({ pageId, pageDir }, files) {
   if (!pageId) return 'unknown';
+  const own = parseJson(files.get(`${pageDir}/page.json`));
+  if (own) return own.displayName || own.name || pageId;
   for (const [path, content] of files) {
     const lower = path.toLowerCase().replace(/\\/g, '/');
     if (lower.endsWith('/page.json') && path.replace(/\\/g, '/').includes(`/${pageId}/`)) {

@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PBIP Lineage Explorer Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: left-rail table of contents on wide screens, single column on phones; running text ~70ch.
+     Dark-first palette, echoing the app's own navy UI; a light palette follows for viewers who choose it. */
+  :root {
+    --bg: #121623;
+    --surface: #1a1f2e;
+    --surface-2: #232a3b;
+    --fg: #e7eaf1;
+    --fg-muted: #a3abbd;
+    --line: #313a4e;
+    --accent: #5cc3cf;          /* teal: graph / lineage */
+    --accent-soft: #163a41;
+    --measure: #f2a93b;         /* amber: DAX measures, matches the app */
+    --measure-soft: #3b2c12;
+    --warn: #f08a74;
+    --warn-soft: #42241d;
+    --ok: #7fcf8f;
+    --ok-soft: #1d3625;
+    --info: #7fb3ff;
+    --info-soft: #1d2d4a;
+    --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f4f6f9; --surface: #ffffff; --surface-2: #e9edf3; --fg: #1b2130; --fg-muted: #5a6478;
+      --line: #d3d9e3; --accent: #0b6e7a; --accent-soft: #d6ecef; --measure: #b06400; --measure-soft: #fdefd9;
+      --warn: #a3412d; --warn-soft: #fbe5e0; --ok: #2f7a3e; --ok-soft: #dff1e2; --info: #2b63c4; --info-soft: #dde8fb;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f6f9; --surface: #ffffff; --surface-2: #e9edf3; --fg: #1b2130; --fg-muted: #5a6478;
+    --line: #d3d9e3; --accent: #0b6e7a; --accent-soft: #d6ecef; --measure: #b06400; --measure-soft: #fdefd9;
+    --warn: #a3412d; --warn-soft: #fbe5e0; --ok: #2f7a3e; --ok-soft: #dff1e2; --info: #2b63c4; --info-soft: #dde8fb;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; margin: 0; }
+  a { color: var(--accent); }
+  code, pre, .mono { font-family: var(--font-mono); font-size: 0.9em; }
+  code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+  pre { background: var(--surface-2); padding: 14px 16px; border-radius: 8px; overflow-x: auto; line-height: 1.5; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding-block: 32px 64px; padding-inline: 20px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 40px; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); } .toc { position: static !important; } }
+
+  .toc { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; font-size: 14px; padding-top: 8px; }
+  .toc .label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); font-weight: 600; margin-bottom: 8px; }
+  .toc ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+  .toc a { color: var(--fg); text-decoration: none; display: block; padding: 3px 0 3px 10px; border-left: 2px solid var(--line); }
+  .toc a:hover { border-left-color: var(--accent); color: var(--accent); }
+
+  main { min-width: 0; }
+  header.hero { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 36px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin: 6px 0 12px; text-wrap: balance; font-weight: 700; }
+  .lede { font-size: 18px; color: var(--fg-muted); max-width: 68ch; margin: 0; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .chip { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg-muted); }
+
+  section { margin-bottom: 48px; }
+  h2 { font-size: 24px; margin: 0 0 14px; padding-top: 8px; scroll-margin-top: 16px; text-wrap: balance; }
+  h3 { font-size: 17px; margin: 24px 0 8px; }
+  p, li { max-width: 72ch; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 4px; }
+
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; }
+  .callout.measure { border-color: var(--measure); background: var(--measure-soft); }
+  .callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .callout.ok { border-color: var(--ok); background: var(--ok-soft); }
+  .callout p { margin: 0; }
+  .callout p + p { margin-top: 8px; }
+  .callout strong:first-child { display: block; margin-bottom: 4px; }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 14px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { background: var(--surface-2); font-weight: 600; font-size: 13px; letter-spacing: 0.02em; }
+  tr:last-child td { border-bottom: none; }
+  td.k { white-space: nowrap; font-family: var(--font-mono); font-size: 13px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 14px 0; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+  .card h4 { margin: 0 0 6px; font-size: 15px; }
+  .card p { margin: 0; font-size: 14.5px; color: var(--fg-muted); }
+
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 16px 0; }
+  .flow .step { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; flex: 1 1 150px; min-width: 0; font-size: 14px; }
+  .flow .step b { display: block; font-size: 12px; color: var(--accent); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 2px; }
+  .flow .arrow { align-self: center; color: var(--fg-muted); font-size: 18px; }
+
+  /* Orphan status ladder */
+  .ladder { display: grid; gap: 10px; margin: 16px 0; }
+  .rung { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; border-left-width: 5px; }
+  @media (max-width: 560px) { .rung { grid-template-columns: minmax(0, 1fr); } }
+  .rung .name { font-weight: 700; }
+  .rung .name small { display: block; font-weight: 500; color: var(--fg-muted); font-size: 12px; margin-top: 2px; }
+  .rung p { margin: 0; font-size: 14.5px; }
+  .rung.ok { border-left-color: var(--ok); }
+  .rung.info { border-left-color: var(--info); }
+  .rung.warn { border-left-color: var(--measure); }
+  .rung.bad { border-left-color: var(--warn); }
+
+  .verdict { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+  .verdict.ok { background: var(--ok-soft); color: var(--ok); }
+  .verdict.info { background: var(--info-soft); color: var(--info); }
+  .verdict.warn { background: var(--measure-soft); color: var(--measure); }
+  .verdict.bad { background: var(--warn-soft); color: var(--warn); }
+
+  .tag { display: inline-block; font-family: var(--font-mono); font-size: 11.5px; padding: 1px 7px; border-radius: 5px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg-muted); margin-right: 4px; }
+  .tag.ui { border-color: var(--accent); color: var(--accent); }
+  .tag.core { border-color: var(--measure); color: var(--measure); }
+  .tag.io { border-color: var(--ok); color: var(--ok); }
+
+  details { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 10px 14px; margin: 10px 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p:last-child { margin-bottom: 0; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 16px; font-size: 13.5px; color: var(--fg-muted); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <div class="label">Contents</div>
+    <ol>
+      <li><a href="#what">1. What it does</a></li>
+      <li><a href="#tour">2. The app, section by section</a></li>
+      <li><a href="#fork">3. What this fork adds</a></li>
+      <li><a href="#stack">4. Languages &amp; technology</a></li>
+      <li><a href="#license">5. License &amp; corporate use</a></li>
+      <li><a href="#security">6. Security &amp; privacy</a></li>
+      <li><a href="#orphans">7. Orphans, defined</a></li>
+      <li><a href="#deep">8. Deeper dive: the code</a></li>
+      <li><a href="#faq">9. Committee FAQ</a></li>
+      <li><a href="#glossary">10. Glossary</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">Internal documentation · technical review</div>
+      <h1>PBIP Lineage Explorer: what it is, how it works, and what to know before adopting it</h1>
+      <p class="lede">A browser tool that reads a Power BI project folder and answers "where does this number come from, and what breaks if I change it?" This guide is written so you can explain the tool to analysts, developers, and a review committee without reading the source code.</p>
+      <div class="meta">
+        <span class="chip">Fork maintained in-house (Abearstudios)</span>
+        <span class="chip">Upstream: JonathanJihwanKim/pbip-lineage-explorer</span>
+        <span class="chip">MIT License</span>
+        <span class="chip">100% in the browser, no server</span>
+        <span class="chip">~14,500 lines of JavaScript</span>
+        <span class="chip">133 automated tests</span>
+      </div>
+    </header>
+
+    <!-- 1 -------------------------------------------------------------- -->
+    <section id="what">
+      <h2>1. What it does, in plain terms</h2>
+      <p>Power BI Desktop can save a report as a <strong>PBIP project</strong>: a folder of plain-text files instead of one binary <code>.pbix</code>. Inside that folder, the <em>semantic model</em> (tables, columns, DAX measures, data source connections, security roles) and the <em>report</em> (pages, visuals, filters) are each described in text files. The Lineage Explorer reads those files and builds a map of how everything connects.</p>
+      <p>With that map it can answer five questions in one click:</p>
+      <ul>
+        <li><strong>Where does this visual get its data?</strong> Visual → DAX measure → sub-measures → table columns → Power Query step → source database table and column, including columns that were renamed along the way.</li>
+        <li><strong>What breaks if I change this measure?</strong> Every measure that depends on it and every visual, page, and report that displays it.</li>
+        <li><strong>What is unused?</strong> Measures and columns that nothing on any report actually uses, graded by how disconnected they are (see <a href="#orphans">section 7</a>).</li>
+        <li><strong>How do all the measures relate?</strong> A spreadsheet-style grid of every measure with its dependency counts, and a map centred on any one measure.</li>
+        <li><strong>What changed recently?</strong> If the folder is a git repository, it reads the commit history and lists what changed, commit by commit, and which visuals that affects.</li>
+      </ul>
+
+      <div class="flow" aria-label="How it works">
+        <div class="step"><b>1. You pick a folder</b>Chrome or Edge asks you to choose the PBIP folder (or a folder of several PBIP reports). The browser reads the text files locally.</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>2. It parses the files</b>TMDL files become tables, columns, measures, and security roles. JSON files become pages, visuals, and filters. DAX text is scanned for references.</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>3. It builds a graph</b>Every object is a node; every "uses" relationship is an edge. This is the lineage graph.</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>4. You explore</b>Click a measure or visual, and the tool walks the graph and draws the result.</div>
+      </div>
+
+      <div class="callout">
+        <p><strong>The one-sentence version for a non-technical audience</strong>It is a read-only "X-ray" of a Power BI report that shows which calculations feed which charts and which database columns feed those calculations, so changes can be made safely.</p>
+      </div>
+    </section>
+
+    <!-- 2 -------------------------------------------------------------- -->
+    <section id="tour">
+      <h2>2. The app, section by section</h2>
+      <p>Everything lives on one screen. Here is what each area is for.</p>
+
+      <div class="grid">
+        <div class="card"><h4>Launcher</h4><p><code>start.bat</code> (Windows) or <code>start.command</code> (macOS) checks for Node.js, installs dependencies the first time, starts a local web server on the user's own machine, and opens the browser. Nothing runs anywhere else.</p></div>
+        <div class="card"><h4>Welcome screen</h4><p><em>Open Project Folder</em> picks a PBIP folder or a folder containing several reports; <em>Try Sample Project</em> loads a small bundled example. Folders can also be dragged in.</p></div>
+        <div class="card"><h4>Toolbar</h4><p>Project stats (tables, measures, visuals, orphans) plus buttons for <em>Measure Map</em>, <em>Health</em>, <em>Source Map</em>, <em>Export All</em>, and keyboard help.</p></div>
+        <div class="card"><h4>Sidebar: Measures tab</h4><p>Every DAX measure, searchable, grouped by table. Each carries a status badge (<em>orphan</em>, <em>no visual</em>, <em>filter/RLS</em>, or none). The "True orphans only" filter shows measures that nothing references at all.</p></div>
+        <div class="card"><h4>Sidebar: Visuals tab</h4><p>Every visual grouped by page, and by report when several reports are loaded. Each page has a <em>Layout</em> button that draws where the visuals sit on the canvas.</p></div>
+        <div class="card"><h4>Sidebar: Dependents tab</h4><p>A flat, sortable grid with one row per measure: how many measures it depends on, how many depend on it, columns, visuals, pages, reports, active filters, its status, and its formula. Exports to CSV.</p></div>
+        <div class="card"><h4>Lineage view (main panel)</h4><p>After you click a measure or visual: an interactive tree (Visual → Measure → Table/Column → Power Query → Source) and detail sections: a four-column <em>Dependencies</em> strip (visuals, downstream measures, upstream measures, upstream columns), the DAX dependency chain with highlighted code, a source-column table with rename history, and recent changes.</p></div>
+        <div class="card"><h4>Impact panel</h4><p>Slide-over listing everything upstream (what this depends on) and downstream (what depends on this). Exportable as Markdown.</p></div>
+        <div class="card"><h4>Measure Map</h4><p>One measure at the centre of the diagram. Left: measures it depends on. Right: measures built on it, then every visual it reaches, labelled by report and page. A searchable list of all measures sits beside it; clicking any measure re-centres the map.</p></div>
+        <div class="card"><h4>Source Map</h4><p>A flat, searchable table: every Power BI column mapped to its original database table and column, with server and database. Exports to CSV. Aimed at data engineers.</p></div>
+        <div class="card"><h4>Model Health</h4><p>Dashboard of counts, data sources, relationships, field parameters, calculation groups, and four orphan lists: True, Visual, Filter/RLS, and unused columns.</p></div>
+        <div class="card"><h4>Change History</h4><p>If the folder is a git repo, the tool reads the local commit history and reports what changed (measures, visuals, filters, pages, relationships, sources) and which visuals are affected.</p></div>
+      </div>
+    </section>
+
+    <!-- 3 -------------------------------------------------------------- -->
+    <section id="fork">
+      <h2>3. What this fork adds to the original</h2>
+      <p>The upstream project was created by Jihwan Kim (Microsoft MVP). This fork, maintained in-house under the Abearstudios GitHub account, keeps all of it and adds:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Addition</th><th>What it means for users</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Measure Map</strong></td><td>A measure-centred view of change impact. Pick a measure; see every dependent measure and every visual it reaches across all loaded reports, labelled by report and page. Boxes never overlap.</td></tr>
+          <tr><td><strong>Multi-report workspaces</strong></td><td>Point the tool at a folder containing several PBIP reports. They are analysed as one graph, so "what uses this measure?" is answered across every report at once. Reports that share a semantic model share its objects; any other model present is kept separate so names never collide.</td></tr>
+          <tr><td><strong>Graded orphan detection</strong></td><td>Instead of one yes/no flag, measures are graded (in use / filter-RLS only / no visual / true orphan) and unused columns get their own list. A filter counts as usage only when it is actively set to a value. See <a href="#orphans">section 7</a>.</td></tr>
+          <tr><td><strong>Row-level security awareness</strong></td><td>RLS role files are parsed. A measure used in a security rule is recognised as doing real work even if no visual shows it.</td></tr>
+          <tr><td><strong>Dependents grid and Dependencies strip</strong></td><td>A sortable, exportable table of every measure's dependency counts, and a side-by-side strip on each measure's page listing its visuals, dependents, upstream measures, and columns.</td></tr>
+          <tr><td><strong>Non-overlapping diagrams</strong></td><td>A post-layout collision pass guarantees node boxes cannot overlap, even in dense trees.</td></tr>
+          <tr><td><strong>One-click launcher</strong></td><td><code>start.bat</code> / <code>start.command</code> so non-developers can run it without a terminal.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Sponsor links and donation prompts from the upstream UI have been removed. The welcome screen keeps a single credit link to the original project's GitHub page, as the MIT license's attribution spirit suggests.</p>
+    </section>
+
+    <!-- 4 -------------------------------------------------------------- -->
+    <section id="stack">
+      <h2>4. Languages and technology</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Layer</th><th>Technology</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Language</td><td><strong>JavaScript</strong> (modern ES modules), <strong>HTML</strong>, <strong>CSS</strong></td><td>No TypeScript, no React/Angular/Vue. Deliberately "vanilla" so the code is easy to read and has few dependencies.</td></tr>
+          <tr><td>Diagrams</td><td><strong>D3.js</strong> 7.9</td><td>Draws the tree and map as SVG in the browser. ISC license (equivalent to MIT).</td></tr>
+          <tr><td>Git history</td><td><strong>isomorphic-git</strong> 1.37</td><td>A pure-JavaScript git reader. It reads the local <code>.git</code> folder; it does not contact any remote. MIT license.</td></tr>
+          <tr><td>Build tool</td><td><strong>Vite</strong> 5</td><td>Serves the app locally during use and can bundle it into a static <code>dist/</code> folder for hosting. MIT.</td></tr>
+          <tr><td>Tests</td><td><strong>Vitest</strong> 3</td><td>133 automated tests covering the parsing and graph engine, including dedicated suites for orphan categories, filter usage, and multi-report workspaces. MIT.</td></tr>
+          <tr><td>Runtime</td><td>Chrome 86+ or Edge 86+</td><td>Needs the browser's <em>File System Access API</em> to read a folder. Firefox/Safari fall back to a less capable file picker.</td></tr>
+          <tr><td>Also included</td><td>VS Code extension (<code>packages/vscode</code>)</td><td>Same engine wrapped as an editor extension. Optional; not required for the web app.</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>Production dependency count: 2</strong> (D3 and isomorphic-git). Everything else is only used while building or testing. A small dependency surface is a meaningful security and maintenance advantage; see <a href="#security">section 6</a>.</p>
+      <p>Two ways to run it: the launcher (<code>start.bat</code>) starts a local server on the user's PC, or <code>npm run build</code> produces static files that any internal HTTPS web server can host. There is no backend to deploy in either case.</p>
+    </section>
+
+    <!-- 5 -------------------------------------------------------------- -->
+    <section id="license">
+      <h2>5. License and what it means for an internal corporate tool</h2>
+      <p>The source repository is published under the <strong>MIT License</strong>, copyright 2026 Jihwan Kim. MIT is one of the most permissive open-source licenses and is the same license used by jQuery, React, .NET, and VS Code.</p>
+
+      <div class="grid">
+        <div class="card"><h4>You may</h4><p>Use it for any purpose, including commercial and internal use. Copy it. Modify it (this fork already does). Host it on internal infrastructure. Combine it with proprietary code. Keep your modifications private.</p></div>
+        <div class="card"><h4>You must</h4><p>Keep the original copyright line and the MIT permission text in any copy or substantial portion you distribute. In practice: leave the <code>LICENSE</code> file in the repository. That is the entire obligation.</p></div>
+        <div class="card"><h4>You get no</h4><p>Warranty or support. The software is provided "as is". If it is wrong, nobody is liable. Any support comes from your own team or community goodwill.</p></div>
+      </div>
+
+      <h3>Is MIT fine for an internal tool?</h3>
+      <p>Yes. MIT has no "copyleft" clause, so unlike GPL there is no requirement to publish your changes or open-source anything you build around it. Because the tool is only used internally and never distributed to customers, even the attribution requirement is trivially met by keeping the <code>LICENSE</code> file in place.</p>
+
+      <h3>Points a committee may raise</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Concern</th><th>Assessment</th></tr></thead>
+        <tbody>
+          <tr><td>Dependency licenses</td><td>D3 (ISC) and isomorphic-git (MIT) are both permissive. Build tools (Vite, Vitest) are MIT and are not shipped to users. No GPL/AGPL code is involved.</td></tr>
+          <tr><td>"As is", no warranty</td><td>Standard for open source. Mitigate by treating it as an <em>advisory</em> tool: it helps people find impacts; it does not change any report or data. The 133 automated tests and the ability to read the code are the assurance.</td></tr>
+          <tr><td>Maintenance / abandonment</td><td>The engine is ~14.5k lines of readable JavaScript with no framework lock-in. It is already forked and modified in-house, so it can be maintained by any JavaScript developer if upstream stops. Dependency versions are pinned in <code>package-lock.json</code>.</td></tr>
+          <tr><td>Attribution</td><td>The <code>LICENSE</code> file and a credit link to the original project are kept. Both satisfy MIT.</td></tr>
+          <tr><td>Contributing back</td><td>Optional. Upstream accepts pull requests; the fork's additions could be offered back, which lowers long-term maintenance for everyone.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 6 -------------------------------------------------------------- -->
+    <section id="security">
+      <h2>6. Security and privacy</h2>
+      <div class="callout ok">
+        <p><strong>Short answer</strong>Nothing leaves the user's machine. The tool is a static web page served from the user's own PC (or an internal host). It reads the files you explicitly pick, in memory, in your browser tab, and makes no network calls with that data. There is no server-side component, no account, no database, and no telemetry.</p>
+      </div>
+
+      <h3>What was verified in the code</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Question</th><th>Finding</th></tr></thead>
+        <tbody>
+          <tr><td>Does it upload the project files?</td><td><strong>No.</strong> The only outbound request in the source is a <code>fetch()</code> of the bundled sample project from the app's own origin (used by the "Try Sample" button). No request carries user data.</td></tr>
+          <tr><td>Does it phone home or collect analytics?</td><td><strong>No.</strong> There are no analytics scripts, no tracking pixels, and no third-party scripts in <code>index.html</code>. The only outbound link is a credit link to the original project's GitHub page on the welcome screen, which opens only if a user clicks it. After a few lineage traces the app shows a small in-page note ("You saved about N minutes"); that is local text with no link and no network activity.</td></tr>
+          <tr><td>How does it read files?</td><td>Through the browser's File System Access API in <strong>read-only mode</strong> (<code>showDirectoryPicker({ mode: 'read' })</code>). The user must choose the folder each time; the page cannot browse the disk on its own. It never writes to the folder.</td></tr>
+          <tr><td>Does it modify Power BI files?</td><td><strong>No.</strong> It is read-only by design. The only files it creates are exports the user explicitly requests (CSV, SVG, PNG, Markdown), which download through the normal browser download prompt.</td></tr>
+          <tr><td>What does the git feature touch?</td><td>It reads the local <code>.git</code> folder (objects and refs) with isomorphic-git to diff commits. It does not fetch, push, or contact a remote, and needs no credentials.</td></tr>
+          <tr><td>What does it do with security roles?</td><td>It reads RLS role definitions (TMDL role files) to see which measures and columns the filter expressions reference. It only uses this to grade usage; it does not evaluate or enforce the rules and does not display row data (there is no row data in a PBIP folder).</td></tr>
+          <tr><td>What is stored in the browser?</td><td>Only UI preferences in <code>localStorage</code>/<code>sessionStorage</code>: a tree-view toggle, a "show hidden visuals" checkbox, and whether the one-time note was shown. No project content is persisted. Closing the tab discards the parsed data.</td></tr>
+          <tr><td>Does it need admin rights or installs?</td><td>No admin rights. The launcher needs Node.js installed once (a standard developer runtime); end users of a hosted copy need only a browser.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>What a reviewer should still consider</h3>
+      <ul>
+        <li><strong>The metadata itself is sensitive.</strong> PBIP files contain DAX formulas, table and column names, RLS rule expressions, and Power Query connection strings (server names, database names, sometimes schemas). The tool shows these on screen and includes them in exports. This is the same information a developer already sees in Power BI Desktop, but exported CSV/PNG files should be handled like any internal design document.</li>
+        <li><strong>Host it internally if hosting at all.</strong> The upstream project runs a public demo on GitHub Pages. Because the app is client-side, even that copy would not upload files, but running the launcher locally or hosting the built <code>dist/</code> on internal infrastructure removes any doubt and lets you control the version.</li>
+        <li><strong>Secure context requirement.</strong> The File System Access API only works over HTTPS or <code>localhost</code>. Opening the HTML directly from a file share (<code>file://</code>) will not work. The launcher uses <code>localhost</code>, which satisfies this.</li>
+        <li><strong>Supply chain.</strong> Two runtime dependencies, both widely used and version-pinned in the lock file. Run <code>npm audit</code> as part of any build pipeline and build on your own machines rather than trusting a prebuilt bundle.</li>
+        <li><strong>Browser policy.</strong> Some enterprise browser policies disable the File System Access API. If so, the fallback folder picker still works, but drag-and-drop and the git feature may not.</li>
+        <li><strong>Parsing untrusted input.</strong> The tool parses JSON and TMDL text with regular expressions and <code>JSON.parse</code>; it never evaluates DAX, M, or role expressions as code. A malformed file produces a console warning and is skipped, not executed.</li>
+      </ul>
+    </section>
+
+    <!-- 7 -------------------------------------------------------------- -->
+    <section id="orphans">
+      <h2>7. Orphans, defined</h2>
+      <p>"Orphan" is used loosely in Power BI circles to mean "a measure nobody uses". The app is more precise than that: it grades every measure into one of four <strong>usage statuses</strong>, and keeps unused <em>columns</em> in a separate list. Finding orphans matters because they clutter the model, slow down maintenance, and can hide real problems (a measure that <em>used</em> to feed a KPI and silently stopped).</p>
+
+      <div class="callout measure">
+        <p><strong>One rule drives everything</strong>The app follows each measure forward through everything that consumes it (other measures, calculated columns, field parameters, calculation groups) and records what it finally reaches: a visual, an active filter, a security role, or nothing. The status is read off that result. The same calculation feeds the sidebar badges, the Dependents grid, the Model Health dashboard, and the toolbar count, so every number in the UI agrees.</p>
+      </div>
+
+      <h3>The four statuses, from healthiest to most disconnected</h3>
+      <div class="ladder">
+        <div class="rung ok"><div class="name">In use<small>badge: none · grid: "in use"</small></div><p>The measure is displayed on at least one visual, either directly or through another measure, a field parameter, or a calculation group that is on a visual. Not an orphan.</p></div>
+        <div class="rung info"><div class="name">Filter / RLS only<small>badge: "filter/RLS" · Health: "Filter / Security Orphans"</small></div><p>No visual shows it, but it is <em>actively filtering</em> a visual, page, or report, or it is referenced by a row-level-security rule. It is doing real work that a reader cannot see. <strong>Usually keep.</strong> Deleting it would change what users are allowed to see.</p></div>
+        <div class="rung warn"><div class="name">Visual orphan<small>badge: "no visual" · Health: "Visual Orphans"</small></div><p>Nothing displays it and no filter or role uses it, but other measures or calculated columns still reference it. It is wired into the model, yet nothing surfaces the result. <strong>Investigate.</strong> Either the chain above it is also unused, or something was disconnected by mistake.</p></div>
+        <div class="rung bad"><div class="name">True orphan<small>badge: "orphan" · Health: "True Orphans"</small></div><p>Referenced by nothing at all: no visual, no measure, no calculated column, no filter, no security role. Completely disconnected. <strong>Safest to delete</strong> after checking the limits below.</p></div>
+      </div>
+
+      <p>When this document, the sidebar's "True orphans only" filter, or a colleague says "orphan" without qualification, they mean the last category: a <strong>True Orphan</strong>. The toolbar's "N orphans" count is the total of the three orphan categories (Filter/RLS, Visual, True); Model Health breaks that total down.</p>
+
+      <h3>Column (field) orphans: a separate list on purpose</h3>
+      <p>Model Health also lists <strong>unused columns</strong>, using the strictest rule: nothing references the column at all, no measure, calculated column, visual, active filter, security role, field parameter, or relationship. Relationship key columns are always treated as in use. Columns are listed separately from measures because the concern is different: an unused column costs memory and refresh time, while an unused measure is a maintenance burden. Mixing the two lists makes both harder to act on.</p>
+
+      <h3>What counts as "used"</h3>
+      <ul>
+        <li><strong>Placed on a visual.</strong> In a chart, card, table, matrix, slicer, KPI, or any other visual's data fields.</li>
+        <li><strong>Used by another measure that is used.</strong> If <code>Net Sales = [Total Sales] * 0.9</code> and <em>Net Sales</em> is on a visual, then <em>Total Sales</em> is in use, even if it never appears on a visual itself. The tool follows these chains to any depth.</li>
+        <li><strong>Inside a field parameter or calculation group that is used.</strong> If a visual uses a field parameter (a dropdown that swaps measures), every measure the parameter can select counts as used.</li>
+        <li><strong>Actively filtering.</strong> The measure sits in the visual, page, or report filter pane <em>and</em> that filter has a value applied. This counts as Filter/RLS usage, not as "in use", because nothing displays the number.</li>
+        <li><strong>Referenced by a row-level-security role.</strong> Same category as filters: real work, invisible to readers.</li>
+      </ul>
+
+      <h3>What does <em>not</em> count</h3>
+      <ul>
+        <li><strong>On a filter panel with no value set.</strong> A field sitting in the filter pane with "(All)" selected is not filtering anything. The report would look identical if it were removed. The app records the reference so it can be listed, but ignores it when grading usage. (The original project counted any filter-pane appearance as usage; this fork changed that.)</li>
+        <li><strong>Referenced only by other orphans.</strong> If measure A is used only by measure B, and B reaches nothing, then A is a Visual Orphan and B is a True Orphan.</li>
+        <li><strong>Existing in the model.</strong> Being defined is not being used.</li>
+      </ul>
+
+      <h3>How "actively filtering" is decided</h3>
+      <p>Each filter in a PBIP file is a small JSON object. When a user applies a value in Power BI Desktop, the file gains a <code>Where</code> clause describing the condition. The tool checks for that clause at all three scopes (visual, page, report):</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Filter state in Power BI</th><th>What the file contains</th><th>Counts as usage?</th></tr></thead>
+        <tbody>
+          <tr><td>Field added to filter pane, nothing selected</td><td>A filter entry with a field but no <code>Where</code> clause</td><td><span class="verdict bad">no</span></td></tr>
+          <tr><td>Basic filter, items ticked</td><td><code>Where</code> → <code>In</code> list of values</td><td><span class="verdict info">yes</span></td></tr>
+          <tr><td>Basic filter, items excluded</td><td><code>Where</code> → <code>Not</code> → <code>In</code></td><td><span class="verdict info">yes</span></td></tr>
+          <tr><td>Advanced filter (greater than, contains, between…)</td><td><code>Where</code> → <code>Comparison</code> / <code>Contains</code> / <code>Between</code></td><td><span class="verdict info">yes</span></td></tr>
+          <tr><td>Top N</td><td>Filter type <code>TopN</code> with an item count</td><td><span class="verdict info">yes</span></td></tr>
+          <tr><td>Relative date / time</td><td>Filter type <code>RelativeDate</code> with a condition</td><td><span class="verdict info">yes</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Worked examples</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Scenario</th><th>Status</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><em>Total Sales</em> is on a bar chart.</td><td><span class="verdict ok">in use</span></td><td>Direct binding.</td></tr>
+          <tr><td><em>Total Sales</em> is on no visual, but <em>YoY Growth</em> uses it and <em>YoY Growth</em> is on a line chart.</td><td><span class="verdict ok">in use</span></td><td>Reached a visual through a dependent measure.</td></tr>
+          <tr><td><em>Margin %</em> is in a page filter set to "greater than 0.2" and on no visual.</td><td><span class="verdict info">filter / RLS</span></td><td>Active page-level filter. Keep it.</td></tr>
+          <tr><td><em>Allowed Region Flag</em> appears only inside an RLS role's rule.</td><td><span class="verdict info">filter / RLS</span></td><td>Security rule. Deleting it would break who-sees-what.</td></tr>
+          <tr><td><em>Margin %</em> is in a page filter with no selection and on no visual, but <em>Margin Rank</em> references it (and is itself unused).</td><td><span class="verdict warn">no visual</span></td><td>The filter is idle; a dependent exists but goes nowhere. Investigate both.</td></tr>
+          <tr><td><em>Test Metric</em> exists in the model and nothing references it.</td><td><span class="verdict bad">true orphan</span></td><td>Nothing reaches it. Candidate for deletion.</td></tr>
+          <tr><td>Five reports share one model. <em>Headcount</em> is only on a visual in report #4.</td><td><span class="verdict ok">in use</span></td><td>With the whole workspace folder loaded, usage in any report counts. Loaded alone, reports #1–3 and #5 would each show it as an orphan, which is why loading the full set matters.</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout warn">
+        <p><strong>Limits to be honest about</strong>The tool only sees the PBIP files you load. A measure used by a report that was not loaded, by an Excel "Analyze in Excel" connection, by a paginated report, by a composite model elsewhere, or by an external tool querying the dataset will look like an orphan here. Treat even a True Orphan as "nothing in <em>these</em> files uses this", a prompt to confirm with the report owners, not an automatic delete list.</p>
+      </div>
+
+      <details>
+        <summary>How the computation works (for the technically curious)</summary>
+        <p>Every "uses" relationship is an edge in the graph, and each edge carries its type (visual binding, measure reference, filter reference with an <code>isActive</code> flag, RLS reference, and so on). <code>classifyMeasureUsage()</code> in <code>packages/core/src/graph/graphBuilder.js</code> walks forward from a measure along consumer edges. Filter and RLS edges are treated as terminal: they set a flag but are not followed further, so a page-level filter can never be mistaken for "displayed on a visual" by walking page → visuals. Reaching a visual node sets <em>in use</em>. Having any model consumer at all (a measure or calculated column) sets the dependent count. The category is then: visual reached → <em>none</em>; else active filter or role reached → <em>filterSecurity</em>; else dependents &gt; 0 → <em>visual</em>; else → <em>true</em>. <code>findColumnOrphans()</code> in the same file implements the column rule, and <code>findOrphansByCategory()</code> in <code>impactAnalysis.js</code> feeds Model Health. The behaviour is pinned by <code>orphanCategories.test.js</code> and <code>filterUsage.test.js</code>.</p>
+      </details>
+    </section>
+
+    <!-- 8 -------------------------------------------------------------- -->
+    <section id="deep">
+      <h2>8. Deeper dive: which files do what</h2>
+      <p>The repository is split into two halves. The <strong>engine</strong> (<code>packages/core/</code>) knows nothing about browsers; give it file contents, it returns a graph. The <strong>web app</strong> (<code>src/</code> and <code>index.html</code>) handles reading folders, drawing, and clicks. The VS Code extension reuses the same engine. This separation is why the engine can be tested with plain unit tests.</p>
+
+      <p>Legend: <span class="tag io">reads files</span> <span class="tag core">engine / logic</span> <span class="tag ui">user interface</span></p>
+
+      <h3>Engine: parsing PBIP files into data</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td class="k">packages/core/src/parser/tmdlParser.js</td><td><span class="tag core">engine</span> Reads <strong>TMDL</strong> text files (the semantic model). Extracts tables, columns, measures with their DAX, partitions with their Power Query (M) source, relationships, and the data source behind each M query (server, database, schema, table). Also detects column renames inside M so a Power BI column can be traced back to its original source name.</td></tr>
+          <tr><td class="k">packages/core/src/parser/roleParser.js</td><td><span class="tag core">engine</span> Reads <strong>RLS role</strong> files and extracts which measures and columns each security rule's DAX references.</td></tr>
+          <tr><td class="k">packages/core/src/parser/daxParser.js</td><td><span class="tag core">engine</span> Scans a DAX expression and lists what it references: <code>[Measure]</code>, <code>'Table'[Column]</code>, table names, and <code>USERELATIONSHIP</code> pairs. It does not evaluate DAX; it only finds names.</td></tr>
+          <tr><td class="k">packages/core/src/parser/pbirParser.js</td><td><span class="tag core">engine</span> Reads <strong>PBIR</strong> JSON files (the report). Extracts pages, visuals, each visual's bound fields, and filter-pane fields at visual/page/report scope with their active/inactive state. Tags each page and visual with the report it came from.</td></tr>
+          <tr><td class="k">packages/core/src/parser/enrichment.js</td><td><span class="tag core">engine</span> Detects <em>field parameters</em> and <em>calculation groups</em> so the graph can resolve "this visual shows whichever measure the user picked".</td></tr>
+          <tr><td class="k">packages/core/src/parser/projectStructure.js</td><td><span class="tag core">engine</span> Looks at file paths and sorts them into buckets: table files, role files, relationship files, expression files, visual files, page files.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Engine: building and querying the graph</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td class="k">packages/core/src/graph/graphBuilder.js</td><td><span class="tag core">engine</span> The heart. Turns parsed data into nodes (table, column, measure, visual, page, role, source, expression) and typed edges (visual→field, measure→measure, filter→field with active flag, RLS→field, column→table, table→source, and so on). Also home to <code>classifyMeasureUsage()</code>, <code>ORPHAN_CATEGORIES</code>, and <code>findColumnOrphans()</code>: the single source of truth for usage status.</td></tr>
+          <tr><td class="k">packages/core/src/graph/lineageTracer.js</td><td><span class="tag core">engine</span> Given a measure, walks the graph and produces the lineage answer: visuals that show it, its DAX dependency chain, the source-column table, and text summaries. Also the visual-first variant.</td></tr>
+          <tr><td class="k">packages/core/src/graph/impactAnalysis.js</td><td><span class="tag core">engine</span> Upstream/downstream reachability, <code>findOrphans()</code>, <code>findOrphansByCategory()</code> (feeds Model Health), and the exportable impact report.</td></tr>
+          <tr><td class="k">packages/core/src/graph/dependencyStrip.js</td><td><span class="tag core">engine</span> Produces the data behind the Dependencies strip and the Dependents grid: for each measure, its visuals (with report and page), downstream measures, upstream measures, upstream columns, active filters, and status. The UI only renders this; it never infers lineage itself.</td></tr>
+          <tr><td class="k">packages/core/src/diff/*.js</td><td><span class="tag core">engine</span> Change detection. Compares two snapshots of the files (two git commits) and lists what changed per area: measures, visuals, filters, pages, bookmarks, relationships, sources. <code>impactResolver.js</code> maps each change to the visuals it affects.</td></tr>
+          <tr><td class="k">packages/core/src/utils/constants.js</td><td><span class="tag core">engine</span> The vocabulary: node types, edge types, colours, layer labels.</td></tr>
+          <tr><td class="k">packages/core/src/index.js</td><td><span class="tag core">engine</span> Public entry point. <code>analyze()</code> runs the pipeline for one report; <code>analyzeWorkspace()</code> merges several reports, keeping the most-shared semantic model as the primary and namespacing any others.</td></tr>
+          <tr><td class="k">packages/core/tests/*.test.js</td><td><span class="tag core">tests</span> 133 automated tests, including <code>orphanCategories</code>, <code>filterUsage</code>, <code>sharedModelCollapse</code> (multi-report), <code>pageIdentity</code>, and <code>dependencyStrip</code>.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Web app: reading folders</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td class="k">src/parser/pbipReader.js</td><td><span class="tag io">reads files</span> The only place that touches the file system. Opens the folder picker in read mode, finds <code>.Report</code> and <code>.SemanticModel</code> folders (including several reports under one workspace folder), reads the text files into memory, and resolves which semantic model each report points at.</td></tr>
+          <tr><td class="k">src/parser/gitFs.js, gitScanner.js</td><td><span class="tag io">reads files</span> Adapts the local <code>.git</code> folder for isomorphic-git and walks recent commits, feeding pairs of snapshots to the engine's change detection.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Web app: user interface</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td class="k">index.html</td><td><span class="tag ui">UI</span> The page skeleton: toolbar, sidebar tabs (Measures, Visuals, Dependents), main panel, overlays (welcome, loading, report picker, keyboard help, impact panel).</td></tr>
+          <tr><td class="k">styles/main.css</td><td><span class="tag ui">UI</span> All styling. Dark theme with CSS variables.</td></tr>
+          <tr><td class="k">src/main.js</td><td><span class="tag ui">UI</span> The conductor. Wires buttons to actions, holds app state (current graph, current selection, navigation history), runs the load pipeline (read → parse → graph), and updates the URL hash for shareable deep links.</td></tr>
+          <tr><td class="k">src/ui/measurePicker.js</td><td><span class="tag ui">UI</span> Measures sidebar: search, status badges, "True orphans only" filter, change badges.</td></tr>
+          <tr><td class="k">src/ui/visualBrowser.js</td><td><span class="tag ui">UI</span> Visuals sidebar grouped by report and page, with page-layout thumbnails.</td></tr>
+          <tr><td class="k">src/ui/dependentsView.js</td><td><span class="tag ui">UI</span> Dependents tab: the sortable, exportable one-row-per-measure grid.</td></tr>
+          <tr><td class="k">src/ui/lineageView.js</td><td><span class="tag ui">UI</span> The main detail panel: DAX chain with highlighting, source-column table, change history, export buttons.</td></tr>
+          <tr><td class="k">src/ui/dependencyStrip.js</td><td><span class="tag ui">UI</span> The four-column Dependencies strip on a measure's page.</td></tr>
+          <tr><td class="k">src/ui/lineageTree.js</td><td><span class="tag ui">UI</span> The D3 tree diagram, zoom/pan, collapse, SVG/PNG export, and the overlap safety net.</td></tr>
+          <tr><td class="k">src/ui/measureMap.js</td><td><span class="tag ui">UI</span> The Measure Map: measure list, centred diagram, re-centre on click, grouping of visuals by page when there are many.</td></tr>
+          <tr><td class="k">src/ui/impactPanel.js, modelHealth.js, sourceMapping.js, pageLayout.js, toolbar.js</td><td><span class="tag ui">UI</span> The remaining panels, each self-contained: impact slide-over, health dashboard with the four orphan lists, source-map table, page layout canvas, toolbar stats.</td></tr>
+          <tr><td class="k">start.bat, start.command</td><td><span class="tag io">launcher</span> Checks for Node.js, runs <code>npm install</code> once, starts the local Vite server, opens the browser.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>How data flows through those files</h3>
+      <div class="flow">
+        <div class="step"><b>pbipReader.js</b>Folder → <code>Map&lt;path, text&gt;</code></div>
+        <div class="arrow">→</div>
+        <div class="step"><b>projectStructure.js</b>Sort files into model / report / role buckets</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>tmdl · role · dax · pbir parsers</b>Text → tables, measures, roles, visuals, filters</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>graphBuilder.js</b>Objects → nodes and typed edges; usage status</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>lineageTracer · dependencyStrip · impactAnalysis</b>Answer questions about the graph</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>src/ui/*</b>Draw the answer; handle clicks</div>
+      </div>
+
+      <h3>A note on node IDs (useful when reading the code)</h3>
+      <p>Every object in the graph has a string ID that doubles as documentation: <code>table::Sales</code>, <code>column::Sales.Amount</code>, <code>measure::Sales.Total Sales</code>, <code>visual::&lt;page&gt;/&lt;visualId&gt;</code>. In a multi-report workspace, the semantic model that the most reports share is the "primary" and keeps these plain IDs, so one <em>Total Sales</em> node exists no matter how many reports show it. Visuals and pages carry their report name, and any additional, different semantic model is prefixed so its objects can never collide with the primary model's.</p>
+    </section>
+
+    <!-- 9 -------------------------------------------------------------- -->
+    <section id="faq">
+      <h2>9. Questions a committee is likely to ask</h2>
+      <details open><summary>Does it change our Power BI files or data?</summary><p>No. It opens the folder in read-only mode and never writes to it. It does not connect to any data source; it only reads the text that describes the model. The only files it creates are exports a user explicitly clicks to download.</p></details>
+      <details><summary>Where does our data go?</summary><p>Nowhere. Parsing and drawing happen inside the browser tab. There is no server component. Closing the tab discards everything. The code was checked for network calls: the only one fetches the bundled sample from the app's own host.</p></details>
+      <details><summary>Does it need a license or subscription?</summary><p>No. MIT-licensed open source, free for commercial and internal use. No per-seat cost. The only obligation is to keep the license file with the code.</p></details>
+      <details><summary>What do we have to install?</summary><p>For a user running it locally: Node.js once, then double-click the launcher. For a hosted copy: build once and publish the static <code>dist/</code> folder to any internal HTTPS web server; users then need only Chrome or Edge.</p></details>
+      <details><summary>How confident can we be in its answers?</summary><p>The engine has 133 automated tests and the logic is readable JavaScript. Its answers are only as complete as the files it is given: it cannot see usage in reports or workbooks that were not loaded. Treat results, especially the orphan lists, as a strong starting point for a human review rather than an automatic action.</p></details>
+      <details><summary>What is the difference between the orphan numbers in the toolbar and in Model Health?</summary><p>The toolbar shows the total of all three orphan categories. Model Health splits that total into True, Visual, and Filter/RLS, and adds a separate list of unused columns. The sidebar's "True orphans only" filter shows just the first category. All come from the same calculation.</p></details>
+      <details><summary>What happens if the original author stops maintaining it?</summary><p>The code is small, dependency-light, and already forked and modified in-house. It can be maintained by any JavaScript developer. Dependency versions are pinned.</p></details>
+      <details><summary>Does it work offline?</summary><p>Yes, once the page is loaded. It needs no internet connection to analyse a project. (This guide loads a font from Google Fonts for its own styling; the app itself ships its own CSS.)</p></details>
+      <details><summary>Does the git feature need repository credentials?</summary><p>No. It reads the <code>.git</code> folder already on disk. It never contacts GitHub, Azure DevOps, or any remote.</p></details>
+    </section>
+
+    <!-- 10 ------------------------------------------------------------- -->
+    <section id="glossary">
+      <h2>10. Glossary</h2>
+      <div class="table-wrap"><table>
+        <tbody>
+          <tr><td class="k">PBIP</td><td>Power BI Project. The folder-based save format where a report is stored as text files instead of a single <code>.pbix</code>. Enables version control.</td></tr>
+          <tr><td class="k">.SemanticModel</td><td>The folder holding the data model: tables, columns, measures, relationships, security roles, and data source queries. Written in TMDL.</td></tr>
+          <tr><td class="k">.Report</td><td>The folder holding the report layout: pages, visuals, filters, bookmarks. Written as PBIR JSON. Several reports can point at one semantic model.</td></tr>
+          <tr><td class="k">Workspace folder</td><td>This tool's term for a folder containing several PBIP reports, usually sharing a semantic model, analysed together.</td></tr>
+          <tr><td class="k">TMDL</td><td>Tabular Model Definition Language. A readable text format for the semantic model (one file per table, one per role).</td></tr>
+          <tr><td class="k">PBIR</td><td>Power BI Enhanced Report format. JSON files, one per page and one per visual.</td></tr>
+          <tr><td class="k">DAX</td><td>Data Analysis Expressions. The formula language for measures and calculated columns, e.g. <code>SUM(Sales[Amount])</code>.</td></tr>
+          <tr><td class="k">Measure</td><td>A named DAX calculation (Total Sales, YoY Growth). Measures can reference other measures, forming chains.</td></tr>
+          <tr><td class="k">Visual</td><td>A chart, card, table, slicer, or other element on a report page.</td></tr>
+          <tr><td class="k">Filter pane</td><td>The panel in Power BI where fields can be added to filter a visual, a page, or the whole report. A field can sit there with or without a value applied.</td></tr>
+          <tr><td class="k">RLS (row-level security)</td><td>Model rules that restrict which rows each user can see. Written as DAX, so they can reference measures and columns.</td></tr>
+          <tr><td class="k">Field parameter</td><td>A model feature that lets a report user switch which measure or column a visual shows from a dropdown.</td></tr>
+          <tr><td class="k">Calculation group</td><td>A model feature that applies a transformation (YTD, prior year, % of total) to any measure.</td></tr>
+          <tr><td class="k">Power Query / M</td><td>The data-loading language. Each table's partition has an M script that connects to a source and may rename columns.</td></tr>
+          <tr><td class="k">Lineage</td><td>The chain of dependencies from a number on screen back to its source column.</td></tr>
+          <tr><td class="k">Usage status</td><td>In use / Filter-RLS only / Visual orphan / True orphan. See section 7.</td></tr>
+          <tr><td class="k">True Orphan</td><td>A measure referenced by nothing at all in the loaded files. The strictest and most actionable orphan category.</td></tr>
+          <tr><td class="k">Graph / node / edge</td><td>The internal data structure: each object is a node; each "uses" relationship is an edge connecting two nodes.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <footer>
+      Prepared October 2026 for internal review. Source: the in-house fork in the <code>PBIP_Lineage_Explorer_Application</code> repository; upstream <a href="https://github.com/JonathanJihwanKim/pbip-lineage-explorer">github.com/JonathanJihwanKim/pbip-lineage-explorer</a> (MIT, © 2026 Jihwan Kim). Facts about network calls, storage, licenses, orphan rules, and file roles were verified against the source code at the time of writing.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

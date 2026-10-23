@@ -1017,7 +1017,7 @@ const DAX_FUNCTIONS = new Set([
  * Apply basic DAX syntax highlighting.
  * Returns HTML with span classes for coloring.
  */
-function highlightDax(expression) {
+export function highlightDax(expression) {
   if (!expression) return '';
 
   // First escape HTML

@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lineage Explorer and Atlan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: left-rail contents on wide screens, single column on phones. Dark-first, matching the other guides. */
+  :root {
+    --bg: #121623; --surface: #1a1f2e; --surface-2: #232a3b; --fg: #e7eaf1; --fg-muted: #a3abbd; --line: #313a4e;
+    --accent: #5cc3cf; --accent-soft: #163a41; --measure: #f2a93b; --measure-soft: #3b2c12;
+    --warn: #f08a74; --warn-soft: #42241d; --ok: #7fcf8f; --ok-soft: #1d3625; --info: #7fb3ff; --info-soft: #1d2d4a;
+    --atlan: #b59cff; --atlan-soft: #2c2448;   /* violet: Atlan */
+    --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f4f6f9; --surface: #ffffff; --surface-2: #e9edf3; --fg: #1b2130; --fg-muted: #5a6478; --line: #d3d9e3;
+      --accent: #0b6e7a; --accent-soft: #d6ecef; --measure: #b06400; --measure-soft: #fdefd9;
+      --warn: #a3412d; --warn-soft: #fbe5e0; --ok: #2f7a3e; --ok-soft: #dff1e2; --info: #2b63c4; --info-soft: #dde8fb;
+      --atlan: #5b3fbf; --atlan-soft: #ebe5fb;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f6f9; --surface: #ffffff; --surface-2: #e9edf3; --fg: #1b2130; --fg-muted: #5a6478; --line: #d3d9e3;
+    --accent: #0b6e7a; --accent-soft: #d6ecef; --measure: #b06400; --measure-soft: #fdefd9;
+    --warn: #a3412d; --warn-soft: #fbe5e0; --ok: #2f7a3e; --ok-soft: #dff1e2; --info: #2b63c4; --info-soft: #dde8fb;
+    --atlan: #5b3fbf; --atlan-soft: #ebe5fb;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; margin: 0; }
+  a { color: var(--accent); }
+  code { font-family: var(--font-mono); font-size: 0.9em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding-block: 32px 64px; padding-inline: 20px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 40px; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); } .toc { position: static !important; } }
+  .toc { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; font-size: 14px; padding-top: 8px; }
+  .toc .label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); font-weight: 600; margin-bottom: 8px; }
+  .toc ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+  .toc a { color: var(--fg); text-decoration: none; display: block; padding: 3px 0 3px 10px; border-left: 2px solid var(--line); }
+  .toc a:hover { border-left-color: var(--accent); color: var(--accent); }
+
+  main { min-width: 0; }
+  header.hero { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 36px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin: 6px 0 12px; text-wrap: balance; font-weight: 700; }
+  .lede { font-size: 18px; color: var(--fg-muted); max-width: 68ch; margin: 0; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .chip { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg-muted); }
+
+  section { margin-bottom: 48px; }
+  h2 { font-size: 24px; margin: 0 0 14px; padding-top: 8px; scroll-margin-top: 16px; text-wrap: balance; }
+  h3 { font-size: 17px; margin: 24px 0 8px; }
+  p, li { max-width: 72ch; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 6px; }
+
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; }
+  .callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .callout.atlan { border-color: var(--atlan); background: var(--atlan-soft); }
+  .callout p { margin: 0; }
+  .callout p + p { margin-top: 8px; }
+  .callout strong:first-child { display: block; margin-bottom: 4px; }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 14px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { background: var(--surface-2); font-weight: 600; font-size: 13px; letter-spacing: 0.02em; }
+  tr:last-child td { border-bottom: none; }
+  td.cov { white-space: nowrap; }
+
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin: 14px 0; }
+  .side { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; border-top-width: 4px; min-width: 0; }
+  .side.app { border-top-color: var(--accent); }
+  .side.atl { border-top-color: var(--atlan); }
+  .side h4 { margin: 0 0 4px; font-size: 16px; }
+  .side .role { color: var(--fg-muted); font-size: 14px; margin: 0 0 10px; }
+  .side ul { margin: 0; font-size: 14.5px; }
+
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+  .badge.app { background: var(--accent-soft); color: var(--accent); }
+  .badge.atl { background: var(--atlan-soft); color: var(--atlan); }
+  .badge.both { background: var(--ok-soft); color: var(--ok); }
+  .badge.part { background: var(--measure-soft); color: var(--measure); }
+  .badge.none { background: var(--surface-2); color: var(--fg-muted); }
+
+  .play { display: grid; gap: 12px; margin: 14px 0; }
+  .play-item { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .play-item .n { font-family: var(--font-mono); font-weight: 600; font-size: 20px; color: var(--accent); }
+  .play-item h4 { margin: 0 0 4px; font-size: 15.5px; }
+  .play-item p { margin: 0; font-size: 14.5px; }
+  .play-item .effort { margin-top: 8px; }
+
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 16px 0; }
+  .flow .step { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; flex: 1 1 160px; min-width: 0; font-size: 14px; }
+  .flow .step b { display: block; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 2px; }
+  .flow .step.app b { color: var(--accent); }
+  .flow .step.atl b { color: var(--atlan); }
+  .flow .arrow { align-self: center; color: var(--fg-muted); font-size: 18px; }
+
+  .sources { font-size: 14px; }
+  .sources li { margin-bottom: 4px; }
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 16px; font-size: 13.5px; color: var(--fg-muted); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <div class="label">Contents</div>
+    <ol>
+      <li><a href="#summary">1. The short version</a></li>
+      <li><a href="#glance">2. At a glance</a></li>
+      <li><a href="#matrix">3. Capability by capability</a></li>
+      <li><a href="#atlan">4. What Atlan already does</a></li>
+      <li><a href="#app">5. Where the app goes further</a></li>
+      <li><a href="#stronger">6. Where Atlan is stronger</a></li>
+      <li><a href="#synergy">7. Using them together</a></li>
+      <li><a href="#caveats">8. Caveats</a></li>
+      <li><a href="#sources">9. Sources</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">Comparison · Power BI lineage</div>
+      <h1>PBIP Lineage Explorer and Atlan: overlap, gaps, and how they fit together</h1>
+      <p class="lede">How the in-house PBIP Lineage Explorer compares with Atlan's Microsoft Power BI connector, where each one is the better tool, and practical ways to use them together.</p>
+      <div class="meta">
+        <span class="chip">Based on Atlan's public connector docs, October 2026</span>
+        <span class="chip">App facts verified against the source code</span>
+      </div>
+    </header>
+
+    <!-- 1 -->
+    <section id="summary">
+      <h2>1. The short version</h2>
+      <p>The two tools work at different stages of a report's life.</p>
+      <div class="pair">
+        <div class="side atl">
+          <h4>Atlan</h4>
+          <p class="role">Catalogues what is already <strong>published</strong>, tenant-wide, alongside your warehouses and pipelines.</p>
+          <ul>
+            <li>Broad: every crawled workspace and report</li>
+            <li>Shared, governed, scheduled</li>
+            <li>Lineage reaches the report page</li>
+          </ul>
+        </div>
+        <div class="side app">
+          <h4>PBIP Lineage Explorer</h4>
+          <p class="role">Reads the <strong>source files</strong> (PBIP) on someone's machine, before or after publishing.</p>
+          <ul>
+            <li>Deep: every measure, visual, filter, and role in the files you load</li>
+            <li>Personal, local, instant</li>
+            <li>Lineage reaches the individual visual</li>
+          </ul>
+        </div>
+      </div>
+      <p>They overlap less than you might expect, and each covers the other's main blind spot. Atlan cannot see work that has not been published yet or the fine structure inside a model. The app cannot see reports that nobody loaded, or whether anyone actually views them.</p>
+    </section>
+
+    <!-- 2 -->
+    <section id="glance">
+      <h2>2. At a glance</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th></th><th>Atlan (Power BI connector)</th><th>PBIP Lineage Explorer</th></tr></thead>
+        <tbody>
+          <tr><td><strong>What it reads</strong></td><td>Published Power BI Service content, through the admin, scanner, and Fabric APIs</td><td>PBIP files on disk (TMDL and PBIR), plus local git history</td></tr>
+          <tr><td><strong>Scope</strong></td><td>Every crawled workspace in the tenant, plus warehouses, dbt, and other connected tools</td><td>Only the folders you open</td></tr>
+          <tr><td><strong>Setup</strong></td><td>Service principal, four Power BI tenant settings, Contributor or Member workspace roles for page-level lineage</td><td>None. Pick a folder in the browser</td></tr>
+          <tr><td><strong>Freshness</strong></td><td>Scheduled crawls, hourly to monthly</td><td>Whatever is on disk right now, including unpublished work and branches</td></tr>
+          <tr><td><strong>Users</strong></td><td>Shared, multi-user SaaS catalogue</td><td>One person, one browser tab</td></tr>
+          <tr><td><strong>Data leaves the machine?</strong></td><td>Metadata is stored in Atlan's cloud</td><td>No. Everything stays in the browser tab</td></tr>
+          <tr><td><strong>Cost</strong></td><td>Commercial licence</td><td>Free (MIT open source)</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 3 -->
+    <section id="matrix">
+      <h2>3. Capability by capability</h2>
+      <p>"Not documented" means Atlan's public Power BI docs do not mention it. It may still exist in your tenant; see <a href="#caveats">Caveats</a>.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Capability</th><th>Atlan</th><th>App</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Inventory of measures, tables, columns</td><td class="cov"><span class="badge both">Yes</span></td><td class="cov"><span class="badge both">Yes</span></td><td>Atlan across the tenant; the app for loaded models.</td></tr>
+          <tr><td>DAX text for each measure</td><td class="cov"><span class="badge part">Conditional</span></td><td class="cov"><span class="badge both">Yes</span></td><td>Atlan needs the "Enhance admin APIs responses with DAX and mashup expressions" tenant setting.</td></tr>
+          <tr><td>Source table and column lineage</td><td class="cov"><span class="badge both">Yes</span></td><td class="cov"><span class="badge both">Yes</span></td><td>Both follow Power Query renames. Atlan continues upstream into warehouse and pipeline lineage; the app stops at the Power Query source.</td></tr>
+          <tr><td>Column / measure → page</td><td class="cov"><span class="badge part">Conditional</span></td><td class="cov"><span class="badge both">Yes</span></td><td>Atlan needs Contributor-or-higher roles and the scanner-only toggle off.</td></tr>
+          <tr><td>Column / measure → individual visual</td><td class="cov"><span class="badge none">Not documented</span></td><td class="cov"><span class="badge app">Yes</span></td><td>Atlan does not catalogue visuals as assets.</td></tr>
+          <tr><td>Measure → measure dependencies</td><td class="cov"><span class="badge none">Not documented</span></td><td class="cov"><span class="badge app">Yes</span></td><td>The core "what breaks if I change this?" question.</td></tr>
+          <tr><td>Field parameters, calculation groups</td><td class="cov"><span class="badge none">Not documented</span></td><td class="cov"><span class="badge app">Yes</span></td><td></td></tr>
+          <tr><td>Row-level security roles</td><td class="cov"><span class="badge none">Not documented</span></td><td class="cov"><span class="badge app">Yes</span></td><td>The app reads which measures and columns each RLS rule references.</td></tr>
+          <tr><td>Filters: applied vs. idle</td><td class="cov"><span class="badge none">Not documented</span></td><td class="cov"><span class="badge app">Yes</span></td><td>Visual, page, and report scope.</td></tr>
+          <tr><td>Orphan / unused detection</td><td class="cov"><span class="badge none">Not documented</span></td><td class="cov"><span class="badge app">Yes</span></td><td>Four measure statuses plus unused columns.</td></tr>
+          <tr><td>Report views and users</td><td class="cov"><span class="badge atl">Yes</span></td><td class="cov"><span class="badge none">No</span></td><td>Atlan's Power BI miner, for reports and dashboards.</td></tr>
+          <tr><td>Work not yet published</td><td class="cov"><span class="badge none">No</span></td><td class="cov"><span class="badge app">Yes</span></td><td>Branches, pull requests, local edits.</td></tr>
+          <tr><td>Commit-by-commit change history</td><td class="cov"><span class="badge none">No</span></td><td class="cov"><span class="badge app">Yes</span></td><td>With affected visuals for each measure change.</td></tr>
+          <tr><td>Owners, glossary, certification, search</td><td class="cov"><span class="badge atl">Yes</span></td><td class="cov"><span class="badge none">No</span></td><td></td></tr>
+          <tr><td>Reports never saved as PBIP</td><td class="cov"><span class="badge atl">Yes</span></td><td class="cov"><span class="badge none">No</span></td><td>The app's biggest blind spot.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Legend: <span class="badge both">Both</span> <span class="badge atl">Atlan only</span> <span class="badge app">App only</span> <span class="badge part">Conditional</span> <span class="badge none">No / not documented</span></p>
+    </section>
+
+    <!-- 4 -->
+    <section id="atlan">
+      <h2>4. What Atlan already does</h2>
+      <ul>
+        <li><strong>Asset inventory.</strong> Workspaces, apps, dashboards, tiles, reports, pages, semantic models, tables, columns, measures, dataflows, and data sources.</li>
+        <li><strong>DAX text.</strong> Stored on each measure as <code>powerBIMeasureExpression</code>, but only when the "Enhance admin APIs responses with DAX and mashup expressions" tenant setting is on.</li>
+        <li><strong>Upstream lineage to the warehouse.</strong> Table and column level to Snowflake, Databricks, BigQuery, SQL Server, Synapse, Oracle, Redshift, and others. It follows Power Query renames such as <code>Table.RenameColumns</code>, the same idea as the app's rename tracing.</li>
+        <li><strong>Column and measure → page lineage.</strong> Now built into the base connector (the separate app that used to do this is deprecated). It needs Contributor-or-higher workspace access and the scanner-only toggle switched off.</li>
+        <li><strong>Usage and popularity.</strong> The Power BI miner counts views and distinct users for reports and dashboards.</li>
+        <li><strong>Governance.</strong> Owners, glossary terms, tags, certification, search, and discussions on every asset.</li>
+      </ul>
+    </section>
+
+    <!-- 5 -->
+    <section id="app">
+      <h2>5. Where the app goes further</h2>
+      <ol>
+        <li><strong>Works before publishing.</strong> It reads the files a developer is editing, so impact can be checked during a pull request or on a feature branch. Atlan only sees a change after it is published and the next crawl runs.</li>
+        <li><strong>Visual-level detail.</strong> Atlan's lineage stops at the page, and visuals are not catalogued as assets. The app traces to each visual and can show where it sits on the page.</li>
+        <li><strong>Measure-to-measure dependencies.</strong> The Measure Map, Dependents grid, and DAX chain show which measures are built on which. Atlan's docs store each measure's DAX text but do not describe lineage between measures.</li>
+        <li><strong>Graded orphans.</strong> Four statuses (in use, filter/RLS, no visual, true orphan) plus a separate unused-columns list. Atlan's docs do not describe orphan detection.</li>
+        <li><strong>Model features Atlan's docs do not mention.</strong> Field parameters, calculation groups, row-level-security roles, whether a filter is actually applied, bookmarks, and hidden visuals.</li>
+        <li><strong>Commit-by-commit change history.</strong> Each measure change comes with the visuals it affects. Atlan shows the current state, not a diff.</li>
+        <li><strong>No tenant permissions.</strong> No service principal, admin API access, or tenant-setting changes. A review committee will notice this: Atlan's connector needs all three.</li>
+      </ol>
+    </section>
+
+    <!-- 6 -->
+    <section id="stronger">
+      <h2>6. Where Atlan is stronger</h2>
+      <ol>
+        <li><strong>It sees everything that is published.</strong> The app only knows about reports someone saved as PBIP and loaded. This is its biggest blind spot and the reason its orphan lists need a human check.</li>
+        <li><strong>Usage data.</strong> Atlan can tell you a report has had no views in months. The app can tell you a measure is wired to a visual, but not whether anyone looks at it.</li>
+        <li><strong>End-to-end lineage.</strong> Atlan connects Power BI back through the warehouse and transformation pipelines. The app stops at the Power Query source table and column.</li>
+        <li><strong>Shared, governed, always running.</strong> Owners, glossary, searchable history, and scheduled crawls, available to everyone. The app is a personal analysis tool.</li>
+      </ol>
+    </section>
+
+    <!-- 7 -->
+    <section id="synergy">
+      <h2>7. Using them together</h2>
+      <div class="flow" aria-label="Where each tool sits">
+        <div class="step app"><b>Build</b>Developer edits a PBIP project. The app checks impact and orphans locally.</div>
+        <div class="arrow">→</div>
+        <div class="step app"><b>Review</b>Pull request. The app's change history lists what changed and which visuals it hits.</div>
+        <div class="arrow">→</div>
+        <div class="step atl"><b>Publish</b>Report goes to the Power BI Service.</div>
+        <div class="arrow">→</div>
+        <div class="step atl"><b>Catalogue</b>Atlan crawls it, links it to warehouse lineage, and tracks usage.</div>
+      </div>
+
+      <div class="play">
+        <div class="play-item">
+          <div class="n">1</div>
+          <div>
+            <h4>Use each at its stage</h4>
+            <p>Developers use the app while building and reviewing changes. Atlan stays the production catalogue and governance record. There is no conflict, because the app never writes to anything.</p>
+            <div class="effort"><span class="badge both">Works today</span></div>
+          </div>
+        </div>
+        <div class="play-item">
+          <div class="n">2</div>
+          <div>
+            <h4>Make better cleanup decisions</h4>
+            <p>Combine the two signals. A <em>True Orphan</em> in the app, inside a report Atlan shows as unviewed, is a strong deletion candidate. A measure the app calls "in use" that sits only on a report nobody opens is cleanup worth raising with the owner. Neither tool can make that call alone.</p>
+            <div class="effort"><span class="badge both">Works today</span></div>
+          </div>
+        </div>
+        <div class="play-item">
+          <div class="n">3</div>
+          <div>
+            <h4>Close the "only what you loaded" gap</h4>
+            <p>Atlan's lineage lists every published report built on a semantic model. Use that list to collect the right PBIP folders before running a cross-report impact check in the app, so its orphan and impact results cover every consumer.</p>
+            <div class="effort"><span class="badge both">Works today</span></div>
+          </div>
+        </div>
+        <div class="play-item">
+          <div class="n">4</div>
+          <div>
+            <h4>Push the app's findings into Atlan</h4>
+            <p>Atlan's Python SDK (pyatlan) can create custom lineage and attach metadata to existing assets. The app's engine is a standalone JavaScript module, so a script could export measure-to-measure dependencies or orphan status and write them onto Atlan's <code>PowerBIMeasure</code> assets. That would fill Atlan's measure-dependency gap for everyone who uses the catalogue. The hard part is matching names: PBIP files do not contain Power BI Service workspace or dataset IDs, so you would match on model, table, and measure name.</p>
+            <div class="effort"><span class="badge part">Needs development</span></div>
+          </div>
+        </div>
+        <div class="play-item">
+          <div class="n">5</div>
+          <div>
+            <h4>Analyse published reports without PBIP saves</h4>
+            <p>Atlan has an optional "Fetch Extracts for Context Agents" setting that downloads PBIR and TMDL definitions of published reports into object storage. If those extracts match the PBIP folder layout, the app's engine could read them, giving it tenant-wide coverage from Atlan's existing crawl. The format has not been verified; test with one report before planning around it.</p>
+            <div class="effort"><span class="badge none">Worth investigating</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section id="caveats">
+      <h2>8. Caveats</h2>
+      <div class="callout warn">
+        <p><strong>Atlan's docs contradict themselves on measure lineage</strong>One FAQ says "Atlan currently does not support lineage for Microsoft Power BI measures", while the crawl reference and the lineage how-to say measure → page lineage is supported. The FAQ looks out of date, but confirm with your Atlan admin or account team.</p>
+      </div>
+      <ul>
+        <li><strong>"Not documented" is not "not available".</strong> Points in this page about Atlan lacking something mean its public documentation does not mention it. Atlan ships frequently, so check measure-to-measure lineage, visual-level lineage, and field-parameter handling against your own tenant before presenting them as gaps.</li>
+        <li><strong>Your tenant may not have the full feature set.</strong> Page-level lineage depends on how your Atlan connection is configured: the scanner toggle, workspace roles, and the DAX tenant setting. In scanner-only mode Atlan extracts no report pages, and measure-level lineage is degraded.</li>
+        <li><strong>The app's results depend on what is loaded.</strong> Its orphan and impact lists cover only the PBIP folders opened in a session. Treat them as findings to confirm, not actions to take automatically.</li>
+      </ul>
+    </section>
+
+    <!-- 9 -->
+    <section id="sources">
+      <h2>9. Sources</h2>
+      <ul class="sources">
+        <li><a href="https://docs.atlan.com/apps/connectors/business-intelligence/microsoft-power-bi/references/what-does-atlan-crawl-from-microsoft-power-bi">What does Atlan crawl from Microsoft Power BI?</a></li>
+        <li><a href="https://docs.atlan.com/apps/connectors/business-intelligence/microsoft-power-bi/references/what-lineage-does-atlan-extract-from-microsoft-power-bi">What lineage does Atlan extract from Microsoft Power BI?</a></li>
+        <li><a href="https://docs.atlan.com/apps/connectors/business-intelligence/microsoft-power-bi/how-tos/crawl-microsoft-power-bi">Crawl Microsoft Power BI</a></li>
+        <li><a href="https://docs.atlan.com/apps/connectors/business-intelligence/microsoft-power-bi/how-tos/configure-power-bi-tenant-settings">Configure Power BI tenant settings</a></li>
+        <li><a href="https://docs.atlan.com/apps/connectors/business-intelligence/microsoft-power-bi/how-tos/generate-power-bi-columns-measures-pages-lineage">Generate Power BI columns and measures to pages lineage (deprecated)</a></li>
+        <li><a href="https://docs.atlan.com/product/capabilities/lineage/faq/power-bi-measures-lineage-graph">How is the Atlan lineage graph depicted using Power BI measures? (FAQ)</a></li>
+        <li><a href="https://docs.atlan.com/apps/connectors/business-intelligence/microsoft-power-bi/troubleshooting/microsoft-power-bi-connectivity-errors">Power BI connectivity errors</a></li>
+        <li><a href="https://docs.atlan.com/apps/connectors/business-intelligence/microsoft-power-bi/faq/power-bi-dataflow-datasource">Capabilities &amp; limitations (Power BI FAQ)</a></li>
+        <li><a href="https://docs.atlan.com/apps/connectors/business-intelligence/microsoft-power-bi/how-tos/mine-microsoft-power-bi.md">Mine Microsoft Power BI</a></li>
+        <li><a href="https://docs.atlan.com/product/capabilities/usage-and-popularity/how-tos/interpret-usage-metrics">Interpret usage metrics</a></li>
+        <li><a href="https://shipped.atlan.com/explore-usage-and-popularity-for-power-bi-19Zf9e">Explore usage and popularity for Power BI (release note)</a></li>
+        <li><a href="https://docs.atlan.com/product/capabilities/build-apps/sdks/python/how-tos/lineage/manage-lineage">Manage lineage with pyatlan</a></li>
+        <li><a href="https://docs.atlan.com/product/capabilities/build-apps/sdks/python/packages/how-tos/build-lineage">LineageBuilder package</a></li>
+        <li><a href="https://atlan.com/know/data-catalog/microsoft/power-bi-column-level-lineage/">Power BI column-level lineage (Atlan blog)</a></li>
+      </ul>
+    </section>
+
+    <footer>
+      Prepared October 2026. Atlan capabilities are taken from Atlan's public documentation at the time of writing and may differ from your tenant's configuration. PBIP Lineage Explorer capabilities were verified against the in-house <code>PBIP_Lineage_Explorer_Application</code> repository.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

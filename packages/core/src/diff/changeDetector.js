@@ -27,32 +27,37 @@ import { CHANGE_TYPES } from './changeTypes.js';
 export function detectChanges(beforeFiles, afterFiles, graph = null) {
   const allChanges = [];
 
-  // Separate report files from model files
-  const beforeReport = filterReportFiles(beforeFiles);
-  const afterReport = filterReportFiles(afterFiles);
-  const beforeModel = filterModelFiles(beforeFiles);
-  const afterModel = filterModelFiles(afterFiles);
+  // Separate report files from model files, then split them per report /
+  // semantic model folder. A repo can hold several reports (often copies with
+  // the same page, visual and bookmark IDs) and several models with the same
+  // table names; diffing them as one set would pair up unrelated objects.
+  const reports = pairByProject(filterReportFiles(beforeFiles), filterReportFiles(afterFiles), '.report');
+  const models = pairByProject(filterModelFiles(beforeFiles), filterModelFiles(afterFiles), '.semanticmodel');
 
-  // 1. Page-level changes (active page, page add/remove, page filters)
-  allChanges.push(...detectPageChanges(beforeReport, afterReport));
+  for (const [beforeReport, afterReport] of reports) {
+    // 1. Page-level changes (active page, page add/remove, page filters)
+    allChanges.push(...detectPageChanges(beforeReport, afterReport));
 
-  // 2. Report-level filter changes
-  allChanges.push(...detectReportFilterChanges(beforeReport, afterReport));
+    // 2. Report-level filter changes
+    allChanges.push(...detectReportFilterChanges(beforeReport, afterReport));
 
-  // 3. Visual-level changes (visibility, bookmarks, filters, field bindings)
-  allChanges.push(...detectVisualChanges(beforeReport, afterReport));
+    // 3. Visual-level changes (visibility, bookmarks, filters, field bindings)
+    allChanges.push(...detectVisualChanges(beforeReport, afterReport));
 
-  // 4. Bookmark changes
-  allChanges.push(...detectBookmarkChanges(beforeReport, afterReport));
+    // 4. Bookmark changes
+    allChanges.push(...detectBookmarkChanges(beforeReport, afterReport));
+  }
 
-  // 5. Measure, calculation group, and column changes
-  allChanges.push(...detectMeasureChanges(beforeModel, afterModel));
+  for (const [beforeModel, afterModel] of models) {
+    // 5. Measure, calculation group, and column changes
+    allChanges.push(...detectMeasureChanges(beforeModel, afterModel));
 
-  // 6. Relationship changes
-  allChanges.push(...detectRelationshipChanges(beforeModel, afterModel));
+    // 6. Relationship changes
+    allChanges.push(...detectRelationshipChanges(beforeModel, afterModel));
 
-  // 7. Source expression, named expression, and parameter changes
-  allChanges.push(...detectSourceChanges(beforeModel, afterModel));
+    // 7. Source expression, named expression, and parameter changes
+    allChanges.push(...detectSourceChanges(beforeModel, afterModel));
+  }
 
   // 8. Resolve impact for measure and calc item changes using the lineage graph
   if (graph) {
@@ -98,6 +103,29 @@ function buildSummary(changes) {
     byType,
     byScope,
   };
+}
+
+/**
+ * Split before/after file maps by project folder (the path up to the first
+ * segment ending in `suffix`, e.g. "Sales.Report"), pairing each folder's
+ * before and after files. Files outside such a folder (already-relative
+ * paths) form one group together.
+ * @returns {Array<[Map<string, string>, Map<string, string>]>}
+ */
+function pairByProject(beforeFiles, afterFiles, suffix) {
+  const groups = new Map();
+  const add = (files, side) => {
+    for (const [path, content] of files) {
+      const parts = path.replace(/\\/g, '/').split('/');
+      const idx = parts.findIndex(p => p.toLowerCase().endsWith(suffix));
+      const key = idx === -1 ? '' : parts.slice(0, idx + 1).join('/');
+      if (!groups.has(key)) groups.set(key, [new Map(), new Map()]);
+      groups.get(key)[side].set(path, content);
+    }
+  };
+  add(beforeFiles, 0);
+  add(afterFiles, 1);
+  return [...groups.values()];
 }
 
 /**
